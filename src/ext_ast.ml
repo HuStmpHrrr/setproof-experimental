@@ -48,8 +48,7 @@ type quotient_inductive_decl =
       loc
       * identifier            (* type name *)
       * ty list               (* indices *)
-      * ty list               (* arguments *)
-      * int                   (* level *)
+      * ty                    (* kind *)
       * constructor_decl list
       * quotient_decl list
 
