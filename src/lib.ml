@@ -1,6 +1,10 @@
 include Base
 module StrM = Map.M (String)
 
+exception NotImplemented
+
+exception DifferentFileLocations of string * string
+
 (* a data carrying location information *)
 type 'a real_location = {
   file : string;
@@ -17,7 +21,8 @@ type 'a location =
 
 type loc = unit location
 
-exception DifferentFileLocations of string * string
+let loc_dummy : loc = GhostLoc ()
+let loc_ghost d = GhostLoc d
 
 let loc_combine l1 l2 : loc =
   match (l1, l2) with
@@ -32,3 +37,8 @@ let loc_erase l : loc =
   match l with
   | GhostLoc _ -> GhostLoc ()
   | RealLoc l -> RealLoc { l with data = () }
+
+let loc_data l =
+  match l with
+  | GhostLoc a -> a
+  | RealLoc l -> l.data

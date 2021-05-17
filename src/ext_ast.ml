@@ -10,6 +10,7 @@ type tm =
   | TmMatch of loc * tm * branch list
   | TmApp   of loc * tm * tm
   | TmEq    of loc * tm * tm
+  | TmRefl  of loc * tm
 
 and ty = tm
 (** Types *)

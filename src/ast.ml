@@ -68,11 +68,6 @@ and quotient = {
     qit_rhs  : tm;
   }
 
-let rec telescope_to_pi ts rt : ty =
-  match ts with
-  | [] -> rt
-  | t :: ts' -> Pi (t, telescope_to_pi ts' rt)
-
 (* location info for a term *)
 let rec tm_loc t : loc =
   match t with
