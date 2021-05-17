@@ -3,4 +3,6 @@ align-constructors-decl = true
 align-variants-decl = true
 break-infix-before-func = true
 if-then-else = keyword-first
+let-and = sparse
+module-item-spacing = preserve
 type-decl = sparse
