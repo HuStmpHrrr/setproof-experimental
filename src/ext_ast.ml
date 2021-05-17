@@ -25,22 +25,12 @@ and pattern =
   | PatInd      of loc * identifier * pattern list
   | PatEq       of loc * pattern
 
-(** Quotient inductive type constructor declaration *)
-type constructor_decl =
-  | CtrDecl of
+(** Quotient inductive type constructor/quotient declaration *)
+type quotient_inductive_entry_decl =
+  | QuotIndEntryDecl of
       loc
-      * identifier (* constructor name *)
-      * ty list    (* constructor arguments *)
-      * tm list    (* type arguments *)
-
-(** Quotient inductive type quotient declaration *)
-type quotient_decl =
-  | QuotDecl of
-      loc
-      * identifier (* quotient name *)
-      * ty list    (* arguments *)
-      * tm         (* lhs *)
-      * tm         (* rhs *)
+      * identifier (* quotient inductive type entry name *)
+      * ty         (* quotient inductive type entry type *)
 
 (** Quotient inductive type declaration *)
 type quotient_inductive_decl =
@@ -48,24 +38,16 @@ type quotient_inductive_decl =
       loc
       * identifier            (* type name *)
       * ty list               (* indices *)
-      * ty list               (* arguments *)
-      * int                   (* level *)
-      * constructor_decl list
-      * quotient_decl list
-
-type quotient_inductive_decls = quotient_inductive_decl list
-(** (Mutually recursive) quotient inductive type declarations *)
+      * ty                    (* kind *)
+      * quotient_inductive_entry_decl list
 
 (** Top definition *)
 type top_def = TopDef of loc * identifier * ty * tm
 
-type top_defs = top_def list
-(** Top (mutually recursive) definitions *)
-
 (** Top statements *)
 type top_statement =
-  | TopQuotInds of loc * quotient_inductive_decls
-  | TopDefs     of loc * top_defs
+  | TopQuotInd of quotient_inductive_decl
+  | TopDef     of top_def
 
 (** Module definition *)
 type module_def = ModDef of top_statement list
