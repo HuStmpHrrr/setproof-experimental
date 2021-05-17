@@ -29,7 +29,6 @@ type tm =
    * G |- Pi A B : U
    *)
   | Pi       of ty * ty
-  | Ind      of string location      (* (quotient) inductive family with a name *)
   (* G |- a : A   G |- b : B  G |- A : Ui G |- B : Ui
    * ------------------------------------------------
    * G |- a = b : Ui
@@ -68,14 +67,13 @@ and quotient = {
     qit_rhs  : tm;
   }
 
-(* location info for a term *)
+(** location info for a term *)
 let rec tm_loc t : loc =
   match t with
   | U (_, l)          -> l
   | Glob n            -> loc_erase n
   | Var (_, n)        -> loc_erase n
   | Pi (a, b)         -> loc_combine (tm_loc a) (tm_loc b)
-  | Ind n             -> loc_erase n
   | Eq eq             -> loc_combine (tm_loc eq.tm_ltm) (tm_loc eq.tm_rtm)
   | Lam (_, t, l)     -> loc_combine l (tm_loc t)
   | App (l, r)        -> loc_combine (tm_loc l) (tm_loc r)

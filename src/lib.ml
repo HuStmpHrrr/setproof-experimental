@@ -1,6 +1,7 @@
 include Base
 module StrM = Map.M (String)
 
+exception Impossible
 exception NotImplemented
 
 exception DifferentFileLocations of string * string
@@ -42,3 +43,12 @@ let loc_data l =
   match l with
   | GhostLoc a -> a
   | RealLoc l -> l.data
+
+module Loc = struct
+
+  let map l f =
+    match l with
+    | RealLoc rl -> RealLoc { rl with data = f rl.data }
+    | GhostLoc a -> GhostLoc (f a)
+
+end
