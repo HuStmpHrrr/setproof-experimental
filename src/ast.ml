@@ -1,3 +1,5 @@
+(* Untyped AST. need to convert AST to Typed AST *)
+
 open Lib
 
 type case =
@@ -16,37 +18,37 @@ and pattern =
   | PCase of case
 
 type tm =
-  | U of int * loc              (* universe, with nat level *)
+  | U        of int * loc              (* universe, with nat level *)
   (* a global reference to some definition *)
-  | Glob of string location
+  | Glob     of string location
   (* variable with de Bruijn index. remember string name (None when wildcard) and location *)
-  | Var of int * (string option) location
+  | Var      of int * (string option) location
   (* we then look into type definitions *)
   (* G |- A : U    G, x : A |- B : U
    * --------------------------------
    * G |- Pi A B : U
    *)
-  | Pi of ty * ty
-  | Ind of string location      (* (quotient) inductive family with a name *)
-  (* G |- a : A   G |- b : B
-   * -----------------------
-   * G |- a = b : U
+  | Pi       of ty * ty
+  | Ind      of string location      (* (quotient) inductive family with a name *)
+  (* G |- a : A   G |- b : B  G |- A : Ui G |- B : Ui
+   * ------------------------------------------------
+   * G |- a = b : Ui
    *)
-  | Eq of {
+  | Eq       of {
       tm_ltm : tm;
       tm_rtm : tm;
     }
   (* next we look into terms *)
-  | Lam of tm * loc             (* the location is for the lambda header *)
-  | App of tm * tm
-  (* name of the inductive type + the name of constructor
+  | Lam      of ty * tm * loc        (* the location is for the lambda header *)
+  | App      of tm * tm
+  (* name    of the inductive type + the name of constructor
    * we must make sure the inductive type and the constructor exist
    *)
-  | Constr of string * string location
+  | Constr   of string * string location
   (* Similarly, a constructor for equality *)
   | EqConstr of string * string location
-  | Case of tm * (case * tm) list * loc
-  | Refl of tm * loc            (* location for the refl header *)
+  | Case     of tm * (case * tm) list * loc
+  | Refl     of tm * loc            (* location for the refl header *)
 and ty = tm
 
 (* a telescope is a reverse context, which is good for unification *)
@@ -80,7 +82,7 @@ let rec tm_loc t : loc =
   | Pi (a, b)         -> loc_combine (tm_loc a) (tm_loc b)
   | Ind n             -> loc_erase n
   | Eq eq             -> loc_combine (tm_loc eq.tm_ltm) (tm_loc eq.tm_rtm)
-  | Lam (t, l)        -> loc_combine l (tm_loc t)
+  | Lam (_, t, l)     -> loc_combine l (tm_loc t)
   | App (l, r)        -> loc_combine (tm_loc l) (tm_loc r)
   | Constr (_, n)
     | EqConstr (_, n) -> loc_erase n
