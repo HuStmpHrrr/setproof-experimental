@@ -25,22 +25,12 @@ and pattern =
   | PatInd      of loc * identifier * pattern list
   | PatEq       of loc * pattern
 
-(** Quotient inductive type constructor declaration *)
-type constructor_decl =
+(** Quotient inductive type constructor/quotient declaration *)
+type quotient_inductive_entry_decl =
   | CtrDecl of
       loc
-      * identifier (* constructor name *)
-      * ty list    (* constructor arguments *)
-      * tm list    (* type arguments *)
-
-(** Quotient inductive type quotient declaration *)
-type quotient_decl =
-  | QuotDecl of
-      loc
-      * identifier (* quotient name *)
-      * ty list    (* arguments *)
-      * tm         (* lhs *)
-      * tm         (* rhs *)
+      * identifier (* quotient inductive type entry name *)
+      * ty         (* quotient inductive type entry type *)
 
 (** Quotient inductive type declaration *)
 type quotient_inductive_decl =
@@ -49,8 +39,7 @@ type quotient_inductive_decl =
       * identifier            (* type name *)
       * ty list               (* indices *)
       * ty                    (* kind *)
-      * constructor_decl list
-      * quotient_decl list
+      * quotient_inductive_entry_decl list
 
 (** Top definition *)
 type top_def = TopDef of loc * identifier * ty * tm
