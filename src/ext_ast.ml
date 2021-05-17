@@ -29,25 +29,26 @@ and pattern =
 type quotient_inductive_entry_decl =
   | QuotIndEntryDecl of
       loc
-      * identifier (* quotient inductive type entry name *)
-      * ty         (* quotient inductive type entry type *)
+      * identifier      (* quotient inductive type entry name *)
+      * ty              (* quotient inductive type entry type *)
 
 (** Quotient inductive type declaration *)
 type quotient_inductive_decl =
   | QuotIndDecl of
       loc
-      * identifier            (* type name *)
-      * ty list               (* indices *)
-      * ty                    (* kind *)
+      * identifier                         (* type name *)
+      * ty list                            (* indices *)
+      * ty                                 (* kind *)
       * quotient_inductive_entry_decl list
 
-(** Top definition *)
-type top_def = TopDef of loc * identifier * ty * tm
+(** definition *)
+type def =
+  | Def of loc * identifier * ty * tm
 
 (** Top statements *)
 type top_statement =
   | TopQuotInd of quotient_inductive_decl
-  | TopDef     of top_def
+  | TopDef     of def
 
 (** Module definition *)
 type module_def = ModDef of top_statement list
