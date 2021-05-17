@@ -82,29 +82,62 @@ and pattern_vars p  : int =
   | PVar _     -> 1
   | PCase c    -> case_vars c
 
-(** shift' t by k if the de Bruijn index >= l *)
-let rec shift' t k l : tm =
+(** shift_gen t by k if the de Bruijn index >= l *)
+let rec shift_gen t k l : tm =
   match t with
   | U (_, _)
     | Glob _          -> t
   | Var (i, n)        ->
      if i >= l then Var (i + k, n) else t
   | Pi (a, b)         ->
-     Pi (shift' a k l, shift' b k (1 + l))
+     Pi (shift_gen a k l, shift_gen b k (1 + l))
   | Eq e              -> Eq {
-                           tm_lty = shift' e.tm_lty k l;
-                           tm_rty = shift' e.tm_rty k l;
-                           tm_ltm = shift' e.tm_ltm k l;
-                           tm_rtm = shift' e.tm_rtm k l;
-                         }
-  | Lam (a, t, loc)   -> Lam (shift' a k l, shift' t k (l + 1), loc)
-  | App (t, s)        -> App (shift' t k l, shift' s k l)
+                             tm_lty = shift_gen e.tm_lty k l;
+                             tm_rty = shift_gen e.tm_rty k l;
+                             tm_ltm = shift_gen e.tm_ltm k l;
+                             tm_rtm = shift_gen e.tm_rtm k l;
+                           }
+  | Lam (a, t, loc)   -> Lam (shift_gen a k l, shift_gen t k (l + 1), loc)
+  | App (t, s)        -> App (shift_gen t k l, shift_gen s k l)
   | Constr (_, _)
     | EqConstr (_, _) -> t
-  | Case (t, cs, loc) -> Case (shift' t k l, List.map cs ~f:(fun (c, t') -> (c, shift' t' k (l + case_vars c))), loc)
-  | Refl (t, loc)     -> Refl (shift' t k l, loc)
+  | Case (t, cs, loc) -> Case (shift_gen t k l, List.map cs ~f:(fun (c, t') -> (c, shift_gen t' k (l + case_vars c))), loc)
+  | Refl (t, loc)     -> Refl (shift_gen t k l, loc)
 
-let shift t k : tm = shift' t k 0
+(**
+ * G |- t : T
+ * ---------------------------------
+ * G, D |- shift t |D| : shift T |D|
+ *)
+let shift t k : tm = shift_gen t k 0
+
+(** substitute variables k in t for s shifted by k
+ *
+ * G, S, D |- t : T   G |- s : S
+ * -------------------------------------
+ * G, D |- t [ s / |D| ] : T [ s / |D| ]
+ *)
+let rec subst_gen t k s : tm =
+  match t with
+  | U (_, _)
+    | Glob _          -> t
+  | Var (i, _)        ->
+     if Int.(i = k) then shift s k else t
+  | Pi (a, b)         -> Pi (subst_gen a k s, subst_gen b (1 + k) s)
+  | Eq e              -> Eq {
+                             tm_lty = subst_gen e.tm_lty k s;
+                             tm_rty = subst_gen e.tm_rty k s;
+                             tm_ltm = subst_gen e.tm_ltm k s;
+                             tm_rtm = subst_gen e.tm_rtm k s;
+                           }
+  | Lam (a, t, loc)   -> Lam (subst_gen a k s, subst_gen t (1 + k) s, loc)
+  | App (t, t')       -> App (subst_gen t k s, subst_gen t' k s)
+  | Constr (_, _)
+    | EqConstr (_, _) -> t
+  | Case (t, cs, loc) -> Case (subst_gen t k s, List.map cs ~f:(fun (c, t') -> (c, subst_gen t' (k + case_vars c) s)), loc)
+  | Refl (t, loc)     -> Refl (subst_gen t k s, loc)
+
+let subst t s : tm = subst_gen t 0 s
 
 let env_glookup_opt (g : env) (n : string) : (globdef * ty * loc) option =
   Map.find g.glob n
