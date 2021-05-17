@@ -6,6 +6,7 @@
 
 (executable
  (name main)
+ (public_name setproof)
  ; (flags :standard -w -27 -w -33 -w -26 -w -9)
  (modules main)
  (libraries setproof))
