@@ -41,13 +41,14 @@ type quotient_inductive_decl =
       * ty                                 (* kind *)
       * quotient_inductive_entry_decl list
 
-(** Top definition *)
-type top_def = TopDef of loc * identifier * ty * tm
+(** definition *)
+type def =
+  | Def of loc * identifier * ty * tm
 
 (** Top statements *)
 type top_statement =
   | TopQuotInd of quotient_inductive_decl
-  | TopDef     of top_def
+  | TopDef     of def
 
 (** Module definition *)
 type module_def = ModDef of top_statement list
