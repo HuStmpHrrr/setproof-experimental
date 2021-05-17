@@ -1,28 +1,13 @@
-open Base
-
-type position = {
-  line : int;
-  col : int;
-}
-
-type real_location = {
-  file_name : string;
-  start_pos : position;
-  end_pos : position;
-}
-
-type location =
-  | RealLoc  of real_location
-  | GhostLoc
+open Lib
 
 type identifier = string
 
 (** Terms *)
 type tm =
-  | TmVar   of location * identifier
-  | TmLam   of location * identifier * ty * tm
-  | TmPi    of location * identifier * ty * ty
-  | TmMatch of location * tm * branch list
+  | TmVar   of loc * identifier
+  | TmLam   of loc * identifier * ty * tm
+  | TmPi    of loc * identifier * ty * ty
+  | TmMatch of loc * tm * branch list
 
 and ty = tm
 (** Types *)
@@ -32,30 +17,30 @@ and branch = pattern * tm
 
 (** Match patterns *)
 and pattern =
-  | PatWildcard  of location
-  | PatVar       of location * identifier
-  | PatInductive of location * identifier * pattern list
+  | PatWildcard  of loc
+  | PatVar       of loc * identifier
+  | PatInductive of loc * identifier * pattern list
 
 (** Inductive type constructor declaration *)
-type constructor_decl = CtrDecl of location * identifier * ty
+type constructor_decl = CtrDecl of loc * identifier * ty
 
 (** Inductive type declaration *)
 type inductive_decl =
-  | IndDecl of location * identifier * ty * constructor_decl list
+  | IndDecl of loc * identifier * ty * constructor_decl list
 
 type inductive_decls = inductive_decl list
 (** (Mutually recursive) inductive type declarations *)
 
 (** Top definition *)
-type top_def = TopDef of location * identifier * ty * tm
+type top_def = TopDef of loc * identifier * ty * tm
 
 type top_defs = top_def list
 (** Top (mutually recursive) definitions *)
 
 (** Top statements *)
 type top_statement =
-  | TopInds of location * inductive_decls
-  | TopDefs of location * top_defs
+  | TopInds of loc * inductive_decls
+  | TopDefs of loc * top_defs
 
 (** Module definition *)
 type module_def = ModDef of top_statement list
