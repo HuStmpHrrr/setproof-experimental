@@ -22,6 +22,7 @@ type 'a location =
 type loc = unit location
 
 let loc_dummy : loc = GhostLoc ()
+
 let loc_ghost d = GhostLoc d
 
 let loc_combine l1 l2 : loc =
@@ -29,16 +30,13 @@ let loc_combine l1 l2 : loc =
   | GhostLoc _, _          -> l2
   | _, GhostLoc _          -> l1
   | RealLoc l1, RealLoc l2 ->
-     if String.(l1.file = l2.file)
-     then RealLoc { l1 with end_l = l2.end_l; end_c = l2.end_c; data = () }
-     else raise (DifferentFileLocations (l1.file, l2.file))
+      if String.(l1.file = l2.file)
+      then RealLoc { l1 with end_l = l2.end_l; end_c = l2.end_c; data = () }
+      else raise (DifferentFileLocations (l1.file, l2.file))
 
 let loc_erase l : loc =
   match l with
   | GhostLoc _ -> GhostLoc ()
-  | RealLoc l -> RealLoc { l with data = () }
+  | RealLoc l  -> RealLoc { l with data = () }
 
-let loc_data l =
-  match l with
-  | GhostLoc a -> a
-  | RealLoc l -> l.data
+let loc_data l = match l with GhostLoc a -> a | RealLoc l -> l.data

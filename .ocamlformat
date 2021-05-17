@@ -1,4 +1,6 @@
 align-cases = true
 align-constructors-decl = true
 align-variants-decl = true
-type-decl=sparse
+break-infix-before-func = true
+if-then-else = keyword-first
+type-decl = sparse
