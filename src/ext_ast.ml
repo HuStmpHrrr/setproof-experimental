@@ -27,7 +27,7 @@ and pattern =
 
 (** Quotient inductive type constructor/quotient declaration *)
 type quotient_inductive_entry_decl =
-  | CtrDecl of
+  | QuotIndEntryDecl of
       loc
       * identifier (* quotient inductive type entry name *)
       * ty         (* quotient inductive type entry type *)
