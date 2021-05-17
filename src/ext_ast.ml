@@ -53,19 +53,13 @@ type quotient_inductive_decl =
       * constructor_decl list
       * quotient_decl list
 
-type quotient_inductive_decls = quotient_inductive_decl list
-(** (Mutually recursive) quotient inductive type declarations *)
-
 (** Top definition *)
 type top_def = TopDef of loc * identifier * ty * tm
 
-type top_defs = top_def list
-(** Top (mutually recursive) definitions *)
-
 (** Top statements *)
 type top_statement =
-  | TopQuotInds of loc * quotient_inductive_decls
-  | TopDefs     of loc * top_defs
+  | TopQuotInd of quotient_inductive_decl
+  | TopDef     of top_def
 
 (** Module definition *)
 type module_def = ModDef of top_statement list
