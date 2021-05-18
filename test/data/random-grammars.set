@@ -1,0 +1,100 @@
+x : y := z;
+
+y : z := k;
+
+a : b := lam x : t, x;
+a : b := lam x : pi(t : a) -> t, x;
+
+c : d := lam x : t,
+  match x with
+    Base -> a;
+  quotient
+    Loop -> Refl p;
+;
+
+data a : Univ 0 where;
+
+data s1 : Univ 0 where
+  Base : s1;
+quotient
+  Loop : Base = Base;
+;
+
+m : pi(y : foo) -> indexed y -> foo := lam y : foo, lam x : indexed y,
+  match x with
+    Bar -> (
+      match y with
+       A -> a;
+       B -> a;
+      quotient
+        Eq -> Refl a;
+    );
+;
+
+-- n y : ... := lam match of (indexed y)
+--   Bar2 ->
+--     (lam match of foo
+--       ) y;
+--   Buz2 -> Buz3;
+-- quotient
+--   Eq2 -> Eq3;
+-- ;
+--      ^
+--      ^
+--      ^
+--      Maybe this syntax for match?
+
+n : pi(y : foo) -> indexed2 y -> indexed3 y := lam y : foo, lam x : indexed2 y,
+  match x with
+    Bar2 -> Bar3;
+    Buz2 -> Buz3;
+  quotient
+    Eq2 -> Eq3;
+;
+
+data foo : Univ 0 where
+  A : foo;
+  B : foo;
+quotient
+  Eq : A = B;
+;
+
+data indexed : foo -> Univ 0 where
+  Bar : indexed A;
+;
+
+data indexed2 : foo -> Univ 0 where
+  Bar2 : indexed A;
+  Buz2 : indexed B;
+quotient
+  Eq2 : Bar2 = Buz2;
+;
+
+data indexed3 : foo -> Univ 0 where
+  Bar3 : indexed A;
+  Buz3 : indexed B;
+quotient
+  Eq3 : Bar2 = Buz2;
+;
+
+data nat : Univ 0 where
+  Z : nat;
+  S : nat -> nat;
+;
+
+data bin : Univ 0 where
+  BZ : bin;
+  BzeroAfter : bin -> bin;
+  BoneAfter : bin -> bin;
+quotient
+  BzeroAfter : BZ = BZ;
+;
+
+data int : Univ 0 where
+  IZ : int;
+  Succ : int -> int;
+  Pred : int -> int;
+quotient
+  SuccPred : Succ (Pred n) = n;
+  PredSucc : Pred (Succ n) = n;
+;
