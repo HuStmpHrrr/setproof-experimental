@@ -46,6 +46,10 @@ let loc_data l =
   | RealLoc l -> l.data
 
 module Loc = struct
+  let put l data =
+    match l with
+    | RealLoc rl -> RealLoc { rl with data }
+    | GhostLoc _ -> GhostLoc data
 
   let map l f =
     match l with
