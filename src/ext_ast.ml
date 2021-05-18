@@ -45,9 +45,9 @@ type quotient_inductive_entry_def =
 type quotient_inductive_def =
   QuotIndDef of
     loc
-    * identifier                         (* type name *)
-    * (identifier * ty option) list      (* index names and kinds *)
-    * ty                                 (* kind *)
+    * identifier                        (* type name *)
+    * (identifier * ty) list            (* index names and kinds *)
+    * ty                                (* kind *)
     * quotient_inductive_entry_def list (* constructors *)
     * quotient_inductive_entry_def list (* quotients *)
 
