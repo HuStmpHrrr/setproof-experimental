@@ -11,6 +11,9 @@ depends: [
   "dune"
   "menhir"
   "ocaml" {>= "4.08"}
+  "ppxlib"
+  "sedlex"
+  "stdio"
 ]
 build: ["dune" "build" "-j" jobs]
 dev-repo: "git+https://github.com/HuStmpHrrr/setproof-experimental.git"
