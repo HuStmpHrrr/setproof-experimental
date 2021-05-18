@@ -46,7 +46,8 @@ type tm =
   | Constr   of string * string location
   (* Similarly, a constructor for equality *)
   | EqConstr of string * string location
-  | Case     of tm * (case * tm) list * loc
+  (* scrutinee, patterns for constructors, and patterns for quotients. *)
+  | Case     of tm * (pattern * tm) list * (pattern * tm) list * loc
   | Refl     of tm * loc            (* location for the refl header *)
 and ty = tm
 
