@@ -3,7 +3,7 @@ x : y := z;
 y : z := k;
 
 a : b := lam x : t, x;
-a : b := lam x : pi(t : a) -> t, x;
+a0 : b := lam x : pi(t : a) -> t, x;
 
 c : d := lam x : t,
   match x with
@@ -12,7 +12,7 @@ c : d := lam x : t,
     Loop -> Refl p;
 ;
 
-data a : Univ 0 where;
+data dd : Univ 0 where;
 
 data s1 : Univ 0 where
   Base : s1;
@@ -64,17 +64,17 @@ data indexed : foo -> Univ 0 where
 ;
 
 data indexed2 : foo -> Univ 0 where
-  Bar2 : indexed A;
-  Buz2 : indexed B;
+  Bar2 : indexed2 A;
+  Buz2 : indexed2 B;
 quotient
   Eq2 : Bar2 = Buz2;
 ;
 
 data indexed3 : foo -> Univ 0 where
-  Bar3 : indexed A;
-  Buz3 : indexed B;
+  Bar3 : indexed3 A;
+  Buz3 : indexed3 B;
 quotient
-  Eq3 : Bar2 = Buz2;
+  Eq3 : Bar3 = Buz3;
 ;
 
 data nat : Univ 0 where
@@ -84,10 +84,10 @@ data nat : Univ 0 where
 
 data bin : Univ 0 where
   BZ : bin;
-  BzeroAfter : bin -> bin;
-  BoneAfter : bin -> bin;
+  BZeroAfter : bin -> bin;
+  BOneAfter : bin -> bin;
 quotient
-  BzeroAfter : BZ = BZ;
+  BZerosEq : BZeroAfter BZ = BZ;
 ;
 
 data int : Univ 0 where
