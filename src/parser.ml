@@ -19,7 +19,8 @@ let rec loop next_token lexbuf (checkpoint : Ext_ast.module_def I.checkpoint) =
       let token = next_token () in
       let checkpoint = I.offer checkpoint token in
       loop next_token lexbuf checkpoint
-  | I.Shifting _ | I.AboutToReduce _ ->
+  | I.Shifting _
+  | I.AboutToReduce _ ->
       let checkpoint = I.resume checkpoint in
       loop next_token lexbuf checkpoint
   | I.HandlingError env ->
@@ -45,9 +46,10 @@ let parse_channel name chan =
   try
     loop lexer lexbuf
       (Grammar.Incremental.modDef (fst @@ Sedlexing.lexing_positions lexbuf))
-  with Lexer.InvalidToken (line, column, tok) ->
-    raise
-      (ParserError
-         (Caml.Format.asprintf "lexing error : %s at %d:%d%!" tok line column))
+  with
+  | Lexer.InvalidToken (line, column, tok) ->
+      raise
+        (ParserError
+           (Caml.Format.asprintf "lexing error : %s at %d:%d%!" tok line column))
 
 let parse_file file = Stdio.In_channel.with_file ~f:(parse_channel file) file

@@ -46,9 +46,16 @@ type tm =
   | Constr   of string * string location
   (* Similarly, a constructor for equality *)
   | EqConstr of string * string location
-  | Case     of tm * (case * tm) list * loc
+  (* scrutinee, patterns for constructors, and patterns for quotients. *)
+  | Case     of tm * (pattern * tm) list * (pattern * tm) list * loc
   | Refl     of tm * loc            (* location for the refl header *)
 and ty = tm
+
+type fun_def = {
+    fun_name : string location;
+    fun_type : ty;
+    fun_body : tm;
+  }
 
 (* a telescope is a reverse context, which is good for unification *)
 type telescope = ty list
@@ -67,6 +74,11 @@ and quotient = {
     qit_rhs  : tm;
   }
 
+type module_def = {
+    fun_defs : fun_def list;
+    qit_defs : qit_def list;
+  }
+
 (** location info for a term *)
 let rec tm_loc t : loc =
   match t with
@@ -79,5 +91,5 @@ let rec tm_loc t : loc =
   | App (l, r)        -> loc_combine (tm_loc l) (tm_loc r)
   | Constr (_, n)
     | EqConstr (_, n) -> loc_erase n
-  | Case (_, _, l)    -> l
+  | Case (_, _, _, l) -> l
   | Refl (t, l)       -> loc_combine l (tm_loc t)

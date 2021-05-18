@@ -1,7 +1,9 @@
 align-cases = true
 align-constructors-decl = true
 align-variants-decl = true
+break-cases = all
 break-infix-before-func = true
+exp-grouping = preserve
 if-then-else = keyword-first
 let-and = sparse
 module-item-spacing = preserve
