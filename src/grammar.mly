@@ -41,7 +41,7 @@ let quotInd :=
     { Ext_ast.QuotIndDef (loc_conv $loc, id, inds, kappa, constrs, quots) }
 
 let quotIndArgument :=
-  | SYM_LPAR; id = LOWER_IDENT; ~ = tm; SYM_RPAR; { (id, tm) }
+  | SYM_LPAR; id = LOWER_IDENT; SYM_COLON; ~ = tm; SYM_RPAR; { (id, tm) }
 
 let quotIndEntry :=
   | id = UPPER_IDENT; SYM_COLON; ~ = tm; SYM_SEMI; { Ext_ast.QuotIndEntryDef (loc_conv $loc, id, tm) }
