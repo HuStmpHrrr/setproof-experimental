@@ -1,0 +1,19 @@
+data nat : Univ 0 where
+  Z : nat;
+  S : nat -> nat;
+;
+
+data int : Univ 0 where
+  Pos : nat -> int;
+  Negpos : nat -> int;
+;
+
+data list (a : Univ 0) : Univ 0 where
+  Lnil : list a;
+  Lcons : a -> list a -> list a;
+;
+
+data vector (a : Univ 0) : nat -> Univ 0 where
+  Vnil : vector a Z;
+  Vcons : pi(n : nat) -> a -> vector a n -> vector a (S n);
+;
