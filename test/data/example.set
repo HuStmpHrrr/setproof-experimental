@@ -1,0 +1,10 @@
+x : y := z;
+
+y : z := k;
+
+qind a : Univ 0 where;
+
+qind s1 : Univ 0 where
+  Base : s1;
+  Loop : Base = Base;
+;
