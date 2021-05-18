@@ -31,30 +31,30 @@ and pattern =
   | PatInd      of loc * identifier * pattern list
   | PatEq       of loc * pattern
 
-(** Quotient inductive type constructor/quotient declaration *)
-type quotient_inductive_entry_decl =
-  QuotIndEntryDecl of
+(** Quotient inductive type constructor/quotient *)
+type quotient_inductive_entry_def =
+  QuotIndEntryDef of
     loc
-    * identifier      (* quotient inductive type entry name *)
-    * ty              (* quotient inductive type entry type *)
+    * identifier     (* quotient inductive type entry name *)
+    * ty             (* quotient inductive type entry type *)
 
 (** Quotient inductive type declaration *)
-type quotient_inductive_decl =
-  QuotIndDecl of
+type quotient_inductive_def =
+  QuotIndDef of
     loc
     * identifier                         (* type name *)
     * (identifier * ty option) list      (* index names and kinds *)
     * ty                                 (* kind *)
-    * quotient_inductive_entry_decl list (* constructors *)
-    * quotient_inductive_entry_decl list (* quotients *)
+    * quotient_inductive_entry_def list (* constructors *)
+    * quotient_inductive_entry_def list (* quotients *)
 
 (** definition *)
-type def = Def of loc * identifier * ty * tm
+type fun_def = FunDef of loc * identifier * ty * tm
 
 (** Top statements *)
 type top_statement =
-  | TopQuotInd of quotient_inductive_decl
-  | TopDef     of def
+  | TopQuotInd of quotient_inductive_def
+  | TopFunDef  of fun_def
 
 (** Module definition *)
 type module_def = ModDef of top_statement list

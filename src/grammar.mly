@@ -26,30 +26,30 @@ let modDef :=
 
 let topStmt :=
   | ~ = quotInd; < Ext_ast.TopQuotInd >
-  | ~ = def;     < Ext_ast.TopDef >
+  | ~ = funDef;  < Ext_ast.TopFunDef >
 
 let quotInd :=
   | KEY_DATA; id = LOWER_IDENT; inds = quotIndArgument*; SYM_COLON; kappa = tm; KEY_WHERE;
       constrs = quotIndEntry*;
     SYM_SEMI;
-    { Ext_ast.QuotIndDecl (loc_conv $loc, id, inds, kappa, constrs, []) }
+    { Ext_ast.QuotIndDef (loc_conv $loc, id, inds, kappa, constrs, []) }
   | KEY_DATA; id = LOWER_IDENT; inds = quotIndArgument*; SYM_COLON; kappa = tm; KEY_WHERE;
       constrs = quotIndEntry*;
     KEY_QUOTIENT;
       quots = quotIndEntry*;
     SYM_SEMI;
-    { Ext_ast.QuotIndDecl (loc_conv $loc, id, inds, kappa, constrs, quots) }
+    { Ext_ast.QuotIndDef (loc_conv $loc, id, inds, kappa, constrs, quots) }
 
 let quotIndArgument :=
   | id = LOWER_IDENT;                             { (id, None) }
   | SYM_LPAR; id = LOWER_IDENT; ~ = tm; SYM_RPAR; { (id, Some tm) }
 
 let quotIndEntry :=
-  | id = UPPER_IDENT; SYM_COLON; ~ = tm; SYM_SEMI; { Ext_ast.QuotIndEntryDecl (loc_conv $loc, id, tm) }
+  | id = UPPER_IDENT; SYM_COLON; ~ = tm; SYM_SEMI; { Ext_ast.QuotIndEntryDef (loc_conv $loc, id, tm) }
 
-let def :=
+let funDef :=
   | id = LOWER_IDENT; SYM_COLON; ty = tm; SYM_DEFEQ; ~ = tm; SYM_SEMI;
-    { Ext_ast.Def (loc_conv $loc, id, ty, tm) }
+    { Ext_ast.FunDef (loc_conv $loc, id, ty, tm) }
 
 let tm := tm0
 
