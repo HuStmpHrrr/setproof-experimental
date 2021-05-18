@@ -46,6 +46,8 @@ type qit_def = {
   }
 and quotient = {
     qit_args : telescope;
+    qit_lty  : ty;
+    qit_rty  : ty;
     qit_lhs  : tm;
     qit_rhs  : tm;
   }
@@ -251,22 +253,23 @@ module TmOps = struct
     | Some (tl, ts) -> telescope_to_pi tl (iter_app (Glob (loc_ghost qn)) ts)
     end
 
-  (** we don't have access to the functionality of obtaining type from a well-typed term yet. leave it open here. *)
-  let globdef_ty_gen (get_ty : env -> tm -> ty) g gd : ty =
+  let get_eqconstr_ty g qn n : ty =
+    let qd = env_lookup_qit g qn in
+    begin match Map.find qd.qit_quot (loc_data n) with
+    | None -> raise LookupException
+    | Some q -> telescope_to_pi q.qit_args (Eq {
+                                                tm_lty = q.qit_lty;
+                                                tm_rty = q.qit_rty;
+                                                tm_ltm = q.qit_lhs;
+                                                tm_rtm = q.qit_rhs
+                                           })
+    end
+
+  let globdef_ty_gen g gd : ty =
     match gd with
     | DInd qd           -> qit_ty qd
     | DConstr (qn, n)   -> get_constr_ty g qn n
-    | DEqConstr (qn, n) ->
-       let qd = env_lookup_qit g qn in
-       begin match Map.find qd.qit_quot (loc_data n) with
-       | None -> raise LookupException
-       | Some q -> telescope_to_pi q.qit_args (Eq {
-                                                   tm_lty = get_ty g q.qit_lhs;
-                                                   tm_rty = get_ty g q.qit_rhs;
-                                                   tm_ltm = q.qit_lhs;
-                                                   tm_rtm = q.qit_rhs
-                                              })
-       end
+    | DEqConstr (qn, n) -> get_eqconstr_ty g qn n
     | DDecl t           -> t
     | DDef (t, _)       -> t
 
