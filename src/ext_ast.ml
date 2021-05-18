@@ -43,7 +43,7 @@ type quotient_inductive_decl =
   QuotIndDecl of
     loc
     * identifier                         (* type name *)
-    * (identifier * ty option) list      (* argument names and kinds *)
+    * (identifier * ty option) list      (* index names and kinds *)
     * ty                                 (* kind *)
     * quotient_inductive_entry_decl list (* constructors *)
     * quotient_inductive_entry_decl list (* quotients *)
