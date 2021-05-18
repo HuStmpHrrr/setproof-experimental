@@ -43,9 +43,16 @@ let loc_erase l : loc =
 let loc_data l =
   match l with
   | GhostLoc a -> a
-  | RealLoc l -> l.data
+  | RealLoc l  -> l.data
 
-module Loc = struct
+module Loc : sig
+  include Base.Equal.S1 with type 'a t = 'a location
+
+  val put : 'a t -> 'b -> 'b t
+  val map : 'a t -> ('a -> 'b) -> 'b t
+end = struct
+  type 'a t = 'a location
+
   let put l data =
     match l with
     | RealLoc rl -> RealLoc { rl with data }
@@ -56,4 +63,14 @@ module Loc = struct
     | RealLoc rl -> RealLoc { rl with data = f rl.data }
     | GhostLoc a -> GhostLoc (f a)
 
+  let equal eq l0 l1 =
+    match (l0, l1) with
+    | GhostLoc a, GhostLoc b -> eq a b
+    | RealLoc l1, RealLoc l2 ->
+        String.equal l1.file l2.file
+        && Int.equal l1.start_l l2.start_l
+        && Int.equal l1.start_c l2.start_c
+        && Int.equal l1.end_l l2.end_l
+        && Int.equal l1.end_c l2.end_c
+    | _ -> false
 end
