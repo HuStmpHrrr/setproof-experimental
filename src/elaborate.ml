@@ -11,9 +11,9 @@ type var_ctx = var_entry list StrM.t
 exception DuplicatedConstrIds of string * (constr_entry * constr_entry)
 exception UnknownConstrId of string * loc
 exception UnknownVarId of string * loc
-exception InvalidQITKind of Ext.ty
-exception InvalidQITQuotient of Ext.ty
-exception InvalidQITConstructor of Ext.ty
+exception InvalidQITKind of string * Ext.ty
+exception InvalidQITQuotient of string * Ext.ty
+exception InvalidQITConstructor of string * Ext.ty
 
 let vctx_shiftn n = Map.map ~f:(List.map ~f:(Option.map ~f:(( + ) n)))
 let vctx_shift1 = vctx_shiftn 1
@@ -96,18 +96,20 @@ let elab_fun_def (cctx : constr_ctx) (vctx : var_ctx) :
 
 let elab_constructor (cctx : constr_ctx) (vctx : var_ctx) :
     Ext.quotient_inductive_entry_def -> string * (Int.telescope * Int.tm list) =
- fun (QuotIndEntryDef (loc, id, e_tau)) ->
+  fun (QuotIndEntryDef (_, id, e_tau)) ->
+  let tid = Map.find_exn cctx id |> Either.value in
   let rec destruct_apps acc = function
     | Int.App (i_tau, idx) -> destruct_apps (idx :: acc) i_tau
-    | Int.Glob gloc when Loc.equal String.equal gloc (Loc.put loc id) -> []
-    | _ -> raise (InvalidQITConstructor e_tau)
+    | Int.Glob gloc when String.equal (loc_data gloc) tid -> []
+    | _ -> raise (InvalidQITConstructor (id, e_tau))
   in
   let rec destruct_pis = function
     | Int.Pi (arg, i_tau) ->
         let args, idxs = destruct_pis i_tau in
         (arg :: args, idxs)
     | Int.App _ as i_tau  -> ([], destruct_apps [] i_tau)
-    | _                   -> raise (InvalidQITConstructor e_tau)
+    | Int.Glob _ as i_tau -> ([], destruct_apps [] i_tau)
+    | _                   -> raise (InvalidQITConstructor (id, e_tau))
   in
   (id, destruct_pis (elab_tm cctx vctx e_tau))
 
@@ -119,7 +121,7 @@ let elab_quotient (cctx : constr_ctx) (vctx : var_ctx) :
         let args, lhs, rhs = destruct_tau i_tau in
         (arg :: args, lhs, rhs)
     | Int.Eq { tm_ltm; tm_rtm } -> ([], tm_ltm, tm_rtm)
-    | _                         -> raise (InvalidQITQuotient e_tau)
+    | _                         -> raise (InvalidQITQuotient (id, e_tau))
   in
   let qit_args, qit_lhs, qit_rhs = destruct_tau (elab_tm cctx vctx e_tau) in
   (id, Int.{ qit_args; qit_lhs; qit_rhs })
@@ -132,7 +134,7 @@ let elab_qit_def (cctx : constr_ctx) (vctx : var_ctx) :
         let idxeds, lv = destruct_kappa i_tau in
         (idxed :: idxeds, lv)
     | Int.U (lv, _)         -> ([], lv)
-    | _                     -> raise (InvalidQITKind e_kappa)
+    | _                     -> raise (InvalidQITKind (id, e_kappa))
   in
   let f vctx (id, e_t) = (vctx_add vctx id, elab_tm cctx vctx e_t) in
   let vctx, i_idxs = List.fold_map ~f ~init:vctx e_idxs in
