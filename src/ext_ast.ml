@@ -9,7 +9,11 @@ type tm =
   | TmVar    of loc * identifier
   | TmLam    of loc * identifier * ty * tm
   | TmPi     of loc * identifier * ty * ty
-  | TmMatch  of loc * tm * branch list
+  | TmMatch  of
+      loc
+      * tm                                 (* scrutinee *)
+      * branch list                        (* constructor branches *)
+      * branch list                        (* quotient branches *)
   | TmApp    of loc * tm * tm
   | TmEq     of loc * tm * tm
   | TmRefl   of loc * tm
@@ -29,23 +33,23 @@ and pattern =
 
 (** Quotient inductive type constructor/quotient declaration *)
 type quotient_inductive_entry_decl =
-  | QuotIndEntryDecl of
-      loc
-      * identifier      (* quotient inductive type entry name *)
-      * ty              (* quotient inductive type entry type *)
+  QuotIndEntryDecl of
+    loc
+    * identifier      (* quotient inductive type entry name *)
+    * ty              (* quotient inductive type entry type *)
 
 (** Quotient inductive type declaration *)
 type quotient_inductive_decl =
-  | QuotIndDecl of
-      loc
-      * identifier                         (* type name *)
-      * ty list                            (* indices *)
-      * ty                                 (* kind *)
-      * quotient_inductive_entry_decl list
+  QuotIndDecl of
+    loc
+    * identifier                         (* type name *)
+    * (identifier * ty option) list      (* argument names and kinds *)
+    * ty                                 (* kind *)
+    * quotient_inductive_entry_decl list (* constructors *)
+    * quotient_inductive_entry_decl list (* quotients *)
 
 (** definition *)
-type def =
-  | Def of loc * identifier * ty * tm
+type def = Def of loc * identifier * ty * tm
 
 (** Top statements *)
 type top_statement =

@@ -44,11 +44,12 @@ let gen_lexer lexbuf =
       (* Keywords *)
       | "pi" -> const lexbuf Token.KEY_PI
       | "lam" -> const lexbuf Token.KEY_LAM
-      | "qind" -> const lexbuf Token.KEY_QIND
+      | "data" -> const lexbuf Token.KEY_DATA
       | "where" -> const lexbuf Token.KEY_WHERE
+      | "quotient" -> const lexbuf Token.KEY_QUOTIENT
       | "match" -> const lexbuf Token.KEY_MATCH
       | "with" -> const lexbuf Token.KEY_WITH
-      | "refl" -> const lexbuf Token.KEY_REFL
+      | "Refl" -> const lexbuf Token.KEY_REFL
       | "Univ" -> const lexbuf Token.KEY_UNIV
       (* Symbols *)
       | "(" -> const lexbuf Token.SYM_LPAR

@@ -13,30 +13,43 @@
 %token EOF
 %token SYM_LPAR SYM_RPAR
 %token SYM_DEFEQ SYM_ARROW SYM_COLON SYM_COMMA SYM_SEMI SYM_EQ SYM_UNDERSCORE
-%token KEY_PI KEY_LAM KEY_QIND KEY_WHERE KEY_MATCH KEY_WITH KEY_REFL KEY_UNIV
-%token <string> UPPER_IDENT
-%token <string> LOWER_IDENT
-%token <int> INTEGER
+%token KEY_PI KEY_LAM KEY_DATA KEY_WHERE KEY_QUOTIENT KEY_MATCH KEY_WITH KEY_REFL KEY_UNIV
+%token < string > UPPER_IDENT
+%token < string > LOWER_IDENT
+%token < int > INTEGER
 
-%start <Ext_ast.module_def> modDef
+%start < Ext_ast.module_def > modDef
 %%
 
 let modDef :=
-  | ss = topStmt*; EOF; { Ext_ast.ModDef ss }
+  | ~ = topStmt*; EOF; < Ext_ast.ModDef >
 
 let topStmt :=
-  | q = quotInd; { Ext_ast.TopQuotInd q }
-  | d = def;     { Ext_ast.TopDef d }
+  | ~ = quotInd; < Ext_ast.TopQuotInd >
+  | ~ = def;     < Ext_ast.TopDef >
 
 let quotInd :=
-  | KEY_QIND; id = LOWER_IDENT; inds = varTm*; SYM_COLON; kappa = tm; KEY_WHERE; entries = quotIndEntry*; SYM_SEMI;
-    { Ext_ast.QuotIndDecl (loc_conv $loc, id, inds, kappa, entries) }
+  | KEY_DATA; id = LOWER_IDENT; inds = quotIndArgument*; SYM_COLON; kappa = tm; KEY_WHERE;
+      constrs = quotIndEntry*;
+    SYM_SEMI;
+    { Ext_ast.QuotIndDecl (loc_conv $loc, id, inds, kappa, constrs, []) }
+  | KEY_DATA; id = LOWER_IDENT; inds = quotIndArgument*; SYM_COLON; kappa = tm; KEY_WHERE;
+      constrs = quotIndEntry*;
+    KEY_QUOTIENT;
+      quots = quotIndEntry*;
+    SYM_SEMI;
+    { Ext_ast.QuotIndDecl (loc_conv $loc, id, inds, kappa, constrs, quots) }
+
+let quotIndArgument :=
+  | id = LOWER_IDENT;                             { (id, None) }
+  | SYM_LPAR; id = LOWER_IDENT; ~ = tm; SYM_RPAR; { (id, Some tm) }
 
 let quotIndEntry :=
   | id = UPPER_IDENT; SYM_COLON; ~ = tm; SYM_SEMI; { Ext_ast.QuotIndEntryDecl (loc_conv $loc, id, tm) }
 
 let def :=
-  | id = LOWER_IDENT; SYM_COLON; ty = tm; SYM_DEFEQ; ~ = tm; SYM_SEMI; { Ext_ast.Def (loc_conv $loc, id, ty, tm) }
+  | id = LOWER_IDENT; SYM_COLON; ty = tm; SYM_DEFEQ; ~ = tm; SYM_SEMI;
+    { Ext_ast.Def (loc_conv $loc, id, ty, tm) }
 
 let tm := tm0
 
@@ -45,14 +58,16 @@ let tm0 :=
     { Ext_ast.TmLam (loc_conv $loc, id, ty, tm) }
   | KEY_PI; SYM_LPAR; id = LOWER_IDENT; SYM_COLON; ty0 = tm0; SYM_RPAR; SYM_ARROW; ty1 = tm0;
     { Ext_ast.TmPi (loc_conv $loc, id, ty0, ty1) }
-  | KEY_MATCH; scr = tm0; KEY_WITH; ~ = branches;
-    { Ext_ast.TmMatch (loc_conv $loc, scr, branches) }
+  | KEY_MATCH; scr = tm0; KEY_WITH; constrBrs = branches;
+    { Ext_ast.TmMatch (loc_conv $loc, scr, constrBrs, []) }
+  | KEY_MATCH; scr = tm0; KEY_WITH; constrBrs = branches; KEY_QUOTIENT; quotBrs = branches;
+    { Ext_ast.TmMatch (loc_conv $loc, scr, constrBrs, quotBrs) }
   | ty0 = tm1; SYM_ARROW; ty1 = tm0;
     { Ext_ast.TmPi (loc_conv $loc, "_", ty0, ty1) }
   | ~ = tm1; <>
 
 let branches :=
-  | bs = branch*; { bs }
+  | ~ = branch*; <>
 
 let branch :=
   | ~ = pattern; SYM_ARROW; ~ = tm; SYM_SEMI; { (pattern, tm) }
@@ -73,17 +88,14 @@ let tm1 :=
 
 let tm2 :=
   | f = tm2; a = tm3; { Ext_ast.TmApp (loc_conv $loc, f, a) }
-  | KEY_REFL; tm = tm4;    { Ext_ast.TmRefl (loc_conv $loc, tm) }
+  | KEY_REFL; tm = tm3;    { Ext_ast.TmRefl (loc_conv $loc, tm) }
   | KEY_UNIV; i = INTEGER; { Ext_ast.TmUniv (loc_conv $loc, i) }
   | ~ = tm3; <>
 
 let tm3 :=
   | id = UPPER_IDENT; { Ext_ast.TmConstr (loc_conv $loc, id) }
-  | ~ = varTm;        <>
+  | id = LOWER_IDENT; { Ext_ast.TmVar (loc_conv $loc, id) }
   | ~ = tm4;          <>
 
 let tm4 :=
   | SYM_LPAR; ~ = tm; SYM_RPAR; <>
-
-let varTm :=
-  | id = LOWER_IDENT; { Ext_ast.TmVar (loc_conv $loc, id) }
