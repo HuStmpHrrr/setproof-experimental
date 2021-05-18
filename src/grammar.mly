@@ -13,9 +13,10 @@
 %token EOF
 %token SYM_LPAR SYM_RPAR
 %token SYM_DEFEQ SYM_ARROW SYM_COLON SYM_COMMA SYM_SEMI SYM_EQ SYM_UNDERSCORE
-%token KEY_PI KEY_LAM KEY_QIND KEY_WHERE KEY_MATCH KEY_WITH KEY_REFL
+%token KEY_PI KEY_LAM KEY_QIND KEY_WHERE KEY_MATCH KEY_WITH KEY_REFL KEY_UNIV
 %token <string> UPPER_IDENT
 %token <string> LOWER_IDENT
+%token <int> INTEGER
 
 %start <Ext_ast.module_def> modDef
 %%
@@ -72,17 +73,16 @@ let tm1 :=
 
 let tm2 :=
   | f = tm2; a = tm3; { Ext_ast.TmApp (loc_conv $loc, f, a) }
+  | KEY_REFL; tm = tm4;    { Ext_ast.TmRefl (loc_conv $loc, tm) }
+  | KEY_UNIV; i = INTEGER; { Ext_ast.TmUniv (loc_conv $loc, i) }
   | ~ = tm3; <>
 
 let tm3 :=
-  | KEY_REFL; tm = tm4; { Ext_ast.TmRefl (loc_conv $loc, tm) }
-  | ~ = tm4; <>
+  | id = UPPER_IDENT; { Ext_ast.TmConstr (loc_conv $loc, id) }
+  | ~ = varTm;        <>
+  | ~ = tm4;          <>
 
 let tm4 :=
-  | ~ = varTm; <>
-  | ~ = tm5;   <>
-
-let tm5 :=
   | SYM_LPAR; ~ = tm; SYM_RPAR; <>
 
 let varTm :=

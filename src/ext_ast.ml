@@ -4,13 +4,15 @@ type identifier = string
 
 (** Terms *)
 type tm =
-  | TmVar   of loc * identifier
-  | TmLam   of loc * identifier * ty * tm
-  | TmPi    of loc * identifier * ty * ty
-  | TmMatch of loc * tm * branch list
-  | TmApp   of loc * tm * tm
-  | TmEq    of loc * tm * tm
-  | TmRefl  of loc * tm
+  | TmUniv   of loc * int
+  | TmConstr of loc * identifier
+  | TmVar    of loc * identifier
+  | TmLam    of loc * identifier * ty * tm
+  | TmPi     of loc * identifier * ty * ty
+  | TmMatch  of loc * tm * branch list
+  | TmApp    of loc * tm * tm
+  | TmEq     of loc * tm * tm
+  | TmRefl   of loc * tm
 
 and ty = tm
 (** Types *)

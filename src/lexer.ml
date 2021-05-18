@@ -36,6 +36,8 @@ let gen_lexer lexbuf =
       | line_comment ->
           skip lexbuf;
           lexer lexbuf
+      | Star ('0'..'9') ->
+         Token.INTEGER (Int.of_string (Sedlexing.Utf8.lexeme lexbuf))
       | "{-" ->
           ignore (block_comment_lexeme lexbuf);
           lexer lexbuf
@@ -47,6 +49,7 @@ let gen_lexer lexbuf =
       | "match" -> const lexbuf Token.KEY_MATCH
       | "with" -> const lexbuf Token.KEY_WITH
       | "refl" -> const lexbuf Token.KEY_REFL
+      | "Univ" -> const lexbuf Token.KEY_UNIV
       (* Symbols *)
       | "(" -> const lexbuf Token.SYM_LPAR
       | ")" -> const lexbuf Token.SYM_RPAR
