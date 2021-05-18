@@ -30,7 +30,7 @@ type tm =
   | App of tm * tm
   | Constr   of string * string location
   | EqConstr of string * string location
-  | Case     of ty * tm * (case * tm) list * loc
+  | Case     of ty * tm * (pattern * tm) list * loc
   | Refl     of tm * loc  (* location for the refl header *)
 and ty = tm
 
@@ -116,9 +116,9 @@ let rec shift_gen t k l : tm =
   | App (t, s)        -> App (shift_gen t k l, shift_gen s k l)
   | Constr (_, _)
     | EqConstr (_, _) -> t
-  | Case (a, t, cs, loc) -> Case (shift_gen a k l,
+  | Case (a, t, ps, loc) -> Case (shift_gen a k l,
                                   shift_gen t k l,
-                                  List.map cs ~f:(fun (c, t') -> (c, shift_gen t' k (l + case_vars c))),
+                                  List.map ps ~f:(fun (p, t') -> (p, shift_gen t' k (l + pattern_vars p))),
                                   loc)
   | Refl (t, loc)     -> Refl (shift_gen t k l, loc)
 
@@ -152,9 +152,9 @@ let rec subst_gen t k s  : tm =
   | App (t, t')          -> App (subst_gen t k s, subst_gen t' k s)
   | Constr (_, _)
     | EqConstr (_, _)    -> t
-  | Case (a, t, cs, loc) -> Case (subst_gen a k s,
+  | Case (a, t, ps, loc) -> Case (subst_gen a k s,
                                   subst_gen t k s,
-                                  List.map cs ~f:(fun (c, t') -> (c, subst_gen t' (k + case_vars c) s)),
+                                  List.map ps ~f:(fun (p, t') -> (p, subst_gen t' (k + pattern_vars p) s)),
                                   loc)
   | Refl (t, loc)        -> Refl (subst_gen t k s, loc)
 
