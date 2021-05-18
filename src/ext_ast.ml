@@ -31,6 +31,9 @@ and pattern =
   | PatInd      of loc * identifier * pattern list
   | PatEq       of loc * pattern
 
+(** definition *)
+type fun_def = FunDef of loc * identifier * ty * tm
+
 (** Quotient inductive type constructor/quotient *)
 type quotient_inductive_entry_def =
   QuotIndEntryDef of
@@ -48,13 +51,10 @@ type quotient_inductive_def =
     * quotient_inductive_entry_def list (* constructors *)
     * quotient_inductive_entry_def list (* quotients *)
 
-(** definition *)
-type fun_def = FunDef of loc * identifier * ty * tm
-
 (** Top statements *)
 type top_statement =
-  | TopQuotInd of quotient_inductive_def
   | TopFunDef  of fun_def
+  | TopQuotInd of quotient_inductive_def
 
 (** Module definition *)
 type module_def = ModDef of top_statement list
