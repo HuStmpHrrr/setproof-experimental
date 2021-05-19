@@ -74,10 +74,11 @@ and quotient = {
     qit_rhs  : tm;
   }
 
-type module_def = {
-    fun_defs : fun_def list;
-    qit_defs : qit_def list;
-  }
+type def =
+  | Fun of fun_def
+  | Qit of qit_def
+
+type module_def = def list
 
 (** location info for a term *)
 let rec tm_loc t : loc =
