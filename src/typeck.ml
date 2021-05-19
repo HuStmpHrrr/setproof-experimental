@@ -159,6 +159,10 @@ and quotient_case_check (_g : T.env) ((_pt, _et) : T.ty * T.ty)
    *   )
    * in *)
   match p with
+  (* TODO:
+   * handle this pattern as a syntactic sugar of all left quotient patterns
+   * after implementing a coverage checker
+   *)
   | A.PVar n              -> raise (QuotientPatternWithVar (Loc.map n (Option.value ~default:"_")))
   | A.PCase (A.IndCase _) -> raise NotImplemented
   | A.PCase (A.EqCase _)  -> raise NotImplemented
