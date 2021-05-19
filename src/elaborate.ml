@@ -78,7 +78,7 @@ and elab_pattern (cctx : constr_ctx) (vctx : var_ctx) :
       ( vctx,
         Int.PCase
           (Int.IndCase
-             { tm_ind_name = tid; tm_constr = Loc.put loc id; tm_args = i_ps })
+             { tm_ind_name = tid; tm_constr = Loc.put loc id; tm_args = List.rev i_ps })
       )
   | Ext.PatEq (_, e_p)         ->
       let vctx, i_p = elab_pattern cctx vctx e_p in
@@ -111,7 +111,8 @@ let elab_constructor (cctx : constr_ctx) (vctx : var_ctx) :
     | Int.Glob _ as i_tau -> ([], destruct_apps [] i_tau)
     | _                   -> raise (InvalidQITConstructor (id, e_tau))
   in
-  (id, destruct_pis (elab_tm cctx vctx e_tau))
+  let args, idxs = destruct_pis (elab_tm cctx vctx e_tau) in
+  (id, (List.rev args, List.rev idxs))
 
 let elab_quotient (cctx : constr_ctx) (vctx : var_ctx) :
     Ext.quotient_inductive_entry_def -> string * Int.quotient =
@@ -124,7 +125,7 @@ let elab_quotient (cctx : constr_ctx) (vctx : var_ctx) :
     | _                         -> raise (InvalidQITQuotient (id, e_tau))
   in
   let qit_args, qit_lhs, qit_rhs = destruct_tau (elab_tm cctx vctx e_tau) in
-  (id, Int.{ qit_args; qit_lhs; qit_rhs })
+  (id, Int.{ qit_args = List.rev qit_args; qit_lhs; qit_rhs })
 
 let elab_qit_def (cctx : constr_ctx) (vctx : var_ctx) :
     Ext.quotient_inductive_def -> Int.qit_def =
@@ -142,8 +143,8 @@ let elab_qit_def (cctx : constr_ctx) (vctx : var_ctx) :
   Int.
     {
       qit_name = Loc.put loc id;
-      qit_index = i_idxs;
-      qit_indexed = i_idxeds;
+      qit_index = List.rev i_idxs;
+      qit_indexed = List.rev i_idxeds;
       qit_ret_lv = lv;
       qit_constr =
         List.map ~f:(elab_constructor cctx vctx) e_cstrs
