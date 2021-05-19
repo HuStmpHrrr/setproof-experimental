@@ -111,11 +111,28 @@ let rec type_syn (g : T.env) (t : A.tm) : T.tm * T.ty =
     )
   | A.Constr (qn, n)          -> (T.Constr (qn, n), T.get_constr_ty g qn n)
   | A.EqConstr (qn, n)        -> (T.EqConstr (qn, n), T.get_eqconstr_ty g qn n)
-  | A.Case (_tp, _t, _cs, _l) -> raise NotImplemented
+  | A.Case (_scr, _cs, _qs, _l) -> raise NotImplemented
   | A.Refl (t, loc)           ->
       let t', tt = type_syn g t in
       ( T.Refl (t', loc),
         T.Eq { tm_lty = tt; tm_rty = tt; tm_ltm = t'; tm_rtm = t' }
       )
 
-and type_check (_g : T.env) (_t : A.tm) (_et : T.ty) : T.tm = raise NotImplemented
+and type_check (g : T.env) (e : A.tm) (et : T.ty) : T.tm =
+  match e with
+  | A.Case (s, _cps, _qps, loc) ->
+     let s', st = type_syn g s in
+     let cps' =
+       raise NotImplemented (** TODO: Implement quotient checkings *)
+     in
+     let qps' =
+       raise NotImplemented (** TODO: Implement quotient checkings *)
+     in
+     T.Case (s', st, cps', qps', loc)
+  | _ ->
+      let e', et' = type_syn g e in
+      check_convertible_exn g et' et;
+      e'
+
+and constr_case_check (g : T.env) ((p, e) : A.pattern * A.tm) ((pt, et) : T.ty * T.ty) : T.pattern =
+  raise NotImplemented (** TODO: Implement quotient checkings *)
