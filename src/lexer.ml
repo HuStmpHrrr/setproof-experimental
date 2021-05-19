@@ -36,8 +36,8 @@ let gen_lexer lexbuf =
       | line_comment ->
           skip lexbuf;
           lexer lexbuf
-      | Star ('0'..'9') ->
-         Token.INTEGER (Int.of_string (Sedlexing.Utf8.lexeme lexbuf))
+      | Star '0' .. '9' ->
+          Token.INTEGER (Int.of_string (Sedlexing.Utf8.lexeme lexbuf))
       | "{-" ->
           ignore (block_comment_lexeme lexbuf);
           lexer lexbuf
@@ -64,8 +64,8 @@ let gen_lexer lexbuf =
       | "," -> const lexbuf Token.SYM_COMMA
       | ";" -> const lexbuf Token.SYM_SEMI
       | "=" -> const lexbuf Token.SYM_EQ
-      | "_" -> const lexbuf Token.SYM_UNDERSCORE
-      | "_" | id_start, Star id_continue ->
+      | "_"
+      | id_start, Star id_continue ->
           let tok = Sedlexing.Utf8.lexeme lexbuf in
           if Char.is_uppercase (String.get tok 0)
           then Token.UPPER_IDENT tok

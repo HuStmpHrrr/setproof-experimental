@@ -12,7 +12,7 @@
 
 %token EOF
 %token SYM_LPAR SYM_RPAR
-%token SYM_DEFEQ SYM_ARROW SYM_COLON SYM_COMMA SYM_SEMI SYM_EQ SYM_UNDERSCORE
+%token SYM_DEFEQ SYM_ARROW SYM_COLON SYM_COMMA SYM_SEMI SYM_EQ
 %token KEY_PI KEY_LAM KEY_DATA KEY_WHERE KEY_QUOTIENT KEY_MATCH KEY_WITH KEY_REFL KEY_UNIV
 %token < string > UPPER_IDENT
 %token < string > LOWER_IDENT
@@ -29,16 +29,16 @@ let topStmt :=
   | ~ = funDef;  < Ext_ast.TopFunDef >
 
 let quotInd :=
-  | KEY_DATA; id = LOWER_IDENT; inds = quotIndArgument*; SYM_COLON; kappa = tm; KEY_WHERE;
-      constrs = quotIndEntry*;
+  | KEY_DATA; quot_id = LOWER_IDENT; quot_indices = quotIndArgument*; SYM_COLON; quot_kind = tm; KEY_WHERE;
+      quot_constrs = quotIndEntry*;
     SYM_SEMI;
-    { Ext_ast.QuotIndDef (loc_conv $loc, id, inds, kappa, constrs, []) }
-  | KEY_DATA; id = LOWER_IDENT; inds = quotIndArgument*; SYM_COLON; kappa = tm; KEY_WHERE;
-      constrs = quotIndEntry*;
+    { Ext_ast.QuotIndDef { quot_loc = loc_conv $loc; quot_id; quot_indices; quot_kind; quot_constrs; quot_quotients = []} }
+  | KEY_DATA; quot_id = LOWER_IDENT; quot_indices = quotIndArgument*; SYM_COLON; quot_kind = tm; KEY_WHERE;
+      quot_constrs = quotIndEntry*;
     KEY_QUOTIENT;
-      quots = quotIndEntry*;
+      quot_quotients = quotIndEntry*;
     SYM_SEMI;
-    { Ext_ast.QuotIndDef (loc_conv $loc, id, inds, kappa, constrs, quots) }
+    { Ext_ast.QuotIndDef { quot_loc = loc_conv $loc; quot_id; quot_indices; quot_kind; quot_constrs; quot_quotients} }
 
 let quotIndArgument :=
   | SYM_LPAR; id = LOWER_IDENT; SYM_COLON; ~ = tm; SYM_RPAR; { (id, tm) }
@@ -77,7 +77,6 @@ let pattern :=
   | ~ = atomicPattern;                        <>
 
 let atomicPattern :=
-  | SYM_UNDERSCORE;                  { Ext_ast.PatWildcard (loc_conv $loc) }
   | id = LOWER_IDENT;                { Ext_ast.PatVar (loc_conv $loc, id) }
   | SYM_LPAR; ~ = pattern; SYM_RPAR; <>
 

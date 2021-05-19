@@ -31,9 +31,12 @@ let rec loop next_token lexbuf (checkpoint : Ext_ast.module_def I.checkpoint) =
                 ""
                 ^^ "************************************************************@\n"
                 ^^ "  @[<v2>!!! Syntax error in %d@,at %a@]@\n"
-                ^^ "************************************************************@\n")
+                ^^ "************************************************************@\n"
+              )
               (state env) pp_position
-              (fst (Sedlexing.lexing_positions lexbuf))))
+              (fst (Sedlexing.lexing_positions lexbuf))
+           )
+        )
   | I.Accepted module_def -> module_def
   | I.Rejected ->
       (* Cannot happen as we stop at syntax error immediatly *)
@@ -50,6 +53,7 @@ let parse_channel name chan =
   | Lexer.InvalidToken (line, column, tok) ->
       raise
         (ParserError
-           (Caml.Format.asprintf "lexing error : %s at %d:%d%!" tok line column))
+           (Caml.Format.asprintf "lexing error : %s at %d:%d%!" tok line column)
+        )
 
 let parse_file file = Stdio.In_channel.with_file ~f:(parse_channel file) file
