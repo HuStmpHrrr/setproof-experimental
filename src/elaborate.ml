@@ -7,6 +7,7 @@ type constr_entry = (string, string) Either.t
 type constr_ctx = constr_entry StrM.t
 type var_entry = int option
 type var_ctx = var_entry list StrM.t
+type ctx = constr_ctx * var_ctx
 
 exception DuplicatedConstrIds of string * (constr_entry * constr_entry)
 exception UnknownConstrId of string * loc
@@ -18,10 +19,11 @@ exception InvalidQITConstructor of string * Ext.ty
 let vctx_shiftn n = Map.map ~f:(List.map ~f:(Option.map ~f:(( + ) n)))
 let vctx_shift1 = vctx_shiftn 1
 
-let vctx_add vctx id = Map.add_multi (vctx_shiftn 1 vctx) ~key:id ~data:(Some 0)
+let vctx_add_local vctx id =
+  Map.add_multi (vctx_shiftn 1 vctx) ~key:id ~data:(Some 0)
+let vctx_add_global vctx id = Map.add_exn vctx ~key:id ~data:[ None ]
 
-let rec elab_tm (cctx : constr_ctx) (vctx : var_ctx) : Ext.tm -> Int.tm =
-  function
+let rec elab_tm ((cctx, vctx) : ctx) : Ext.tm -> Int.tm = function
   | Ext.TmUniv (loc, lev) -> Int.U (lev, loc)
   | Ext.TmConstr (loc, id) -> (
       let open Option in
@@ -39,37 +41,39 @@ let rec elab_tm (cctx : constr_ctx) (vctx : var_ctx) : Ext.tm -> Int.tm =
       | None            -> raise (UnknownVarId (id, loc))
     )
   | Ext.TmLam (loc, id, e_tau, e_t) ->
-      let vctx' = vctx_add vctx id in
-      Int.Lam (elab_tm cctx vctx e_tau, elab_tm cctx vctx' e_t, loc)
+      let vctx' = vctx_add_local vctx id in
+      Int.Lam (elab_tm (cctx, vctx) e_tau, elab_tm (cctx, vctx') e_t, loc)
   | Ext.TmPi (_, id, e_tau0, e_tau1) ->
-      let vctx' = vctx_add vctx id in
-      Int.Pi (elab_tm cctx vctx e_tau0, elab_tm cctx vctx' e_tau1)
+      let vctx' = vctx_add_local vctx id in
+      Int.Pi (elab_tm (cctx, vctx) e_tau0, elab_tm (cctx, vctx') e_tau1)
   | Ext.TmMatch (loc, e_scr, e_cstr_bs, e_quot_bs) ->
       Int.Case
-        ( elab_tm cctx vctx e_scr,
-          List.map ~f:(elab_branch cctx vctx) e_cstr_bs,
-          List.map ~f:(elab_branch cctx vctx) e_quot_bs,
+        ( elab_tm (cctx, vctx) e_scr,
+          List.map ~f:(elab_branch (cctx, vctx)) e_cstr_bs,
+          List.map ~f:(elab_branch (cctx, vctx)) e_quot_bs,
           loc
         )
   | Ext.TmApp (_, e_f, e_a) ->
-      Int.App (elab_tm cctx vctx e_f, elab_tm cctx vctx e_a)
+      Int.App (elab_tm (cctx, vctx) e_f, elab_tm (cctx, vctx) e_a)
   | Ext.TmEq (_, e_lhs, e_rhs) ->
       Int.Eq
-        { tm_ltm = elab_tm cctx vctx e_lhs; tm_rtm = elab_tm cctx vctx e_rhs }
-  | Ext.TmRefl (loc, e_t) -> Int.Refl (elab_tm cctx vctx e_t, loc)
+        {
+          tm_ltm = elab_tm (cctx, vctx) e_lhs;
+          tm_rtm = elab_tm (cctx, vctx) e_rhs;
+        }
+  | Ext.TmRefl (loc, e_t) -> Int.Refl (elab_tm (cctx, vctx) e_t, loc)
 
-and elab_branch (cctx : constr_ctx) (vctx : var_ctx) :
-    Ext.branch -> Int.pattern * Int.tm =
+and elab_branch ((cctx, vctx) : ctx) : Ext.branch -> Int.pattern * Int.tm =
  fun (e_p, e_t) ->
-  let vctx, i_p = elab_pattern cctx vctx e_p in
-  (i_p, elab_tm cctx vctx e_t)
+  let vctx, i_p = elab_pattern (cctx, vctx) e_p in
+  (i_p, elab_tm (cctx, vctx) e_t)
 
-and elab_pattern (cctx : constr_ctx) (vctx : var_ctx) :
-    Ext.pattern -> var_ctx * Int.pattern = function
+and elab_pattern ((cctx, vctx) : ctx) : Ext.pattern -> var_ctx * Int.pattern =
+  function
   | Ext.PatVar (loc, id)       ->
       if String.equal id "_"
       then (vctx_shift1 vctx, Int.PVar (Loc.put loc None))
-      else (vctx_add vctx id, Int.PVar (Loc.put loc (Some id)))
+      else (vctx_add_local vctx id, Int.PVar (Loc.put loc (Some id)))
   | Ext.PatInd (loc, id, e_ps) ->
       let tid =
         let open Option in
@@ -78,7 +82,9 @@ and elab_pattern (cctx : constr_ctx) (vctx : var_ctx) :
         | Some (Second tid) -> tid
         | None              -> raise (UnknownConstrId (id, loc))
       in
-      let vctx, i_ps = List.fold_map ~f:(elab_pattern cctx) ~init:vctx e_ps in
+      let vctx, i_ps =
+        List.fold_map ~f:(fun vctx -> elab_pattern (cctx, vctx)) ~init:vctx e_ps
+      in
       ( vctx,
         Int.PCase
           (Int.IndCase
@@ -90,24 +96,24 @@ and elab_pattern (cctx : constr_ctx) (vctx : var_ctx) :
           )
       )
   | Ext.PatEq (_, e_p)         ->
-      let vctx, i_p = elab_pattern cctx vctx e_p in
+      let vctx, i_p = elab_pattern (cctx, vctx) e_p in
       (vctx, Int.PCase (Int.EqCase i_p))
 
-let elab_fun_def (cctx : constr_ctx) (vctx : var_ctx) :
-    Ext.fun_def -> Int.fun_def =
+let elab_fun_def ((cctx, vctx) : ctx) : Ext.fun_def -> var_ctx * Int.fun_def =
  fun (Ext.FunDef (loc, id, e_tau, e_t)) ->
   let fun_name = Loc.put loc id in
-  let fun_type = elab_tm cctx vctx e_tau in
-  let fun_body = elab_tm cctx vctx e_t in
-  Int.{ fun_name; fun_type; fun_body }
+  let fun_type = elab_tm (cctx, vctx) e_tau in
+  let vctx = vctx_add_global vctx id in
+  let fun_body = elab_tm (cctx, vctx) e_t in
+  (vctx, Int.{ fun_name; fun_type; fun_body })
 
-let elab_constructor (cctx : constr_ctx) (vctx : var_ctx) :
-    Ext.quotient_inductive_entry_def -> string * (Int.telescope * Int.tm list) =
+let elab_constructor ((cctx, vctx) : ctx) (qid_name : string) :
+    Ext.quotient_inductive_entry_def ->
+    constr_ctx * (string * (Int.telescope * Int.tm list)) =
  fun (QuotIndEntryDef (_, id, e_tau)) ->
-  let tid = Map.find_exn cctx id |> Either.value in
   let rec destruct_apps acc = function
     | Int.App (i_tau, idx) -> destruct_apps (idx :: acc) i_tau
-    | Int.Glob gloc when String.equal (loc_data gloc) tid -> []
+    | Int.Glob gloc when String.equal (loc_data gloc) qid_name -> []
     | _ -> raise (InvalidQITConstructor (id, e_tau))
   in
   let rec destruct_pis = function
@@ -118,11 +124,13 @@ let elab_constructor (cctx : constr_ctx) (vctx : var_ctx) :
     | Int.Glob _ as i_tau -> ([], destruct_apps [] i_tau)
     | _                   -> raise (InvalidQITConstructor (id, e_tau))
   in
-  let args, idxs = destruct_pis (elab_tm cctx vctx e_tau) in
-  (id, (List.rev args, List.rev idxs))
+  let args, idxs = destruct_pis (elab_tm (cctx, vctx) e_tau) in
+  ( Map.add_exn cctx ~key:id ~data:(Either.First qid_name),
+    (id, (List.rev args, List.rev idxs))
+  )
 
-let elab_quotient (cctx : constr_ctx) (vctx : var_ctx) :
-    Ext.quotient_inductive_entry_def -> string * Int.quotient =
+let elab_quotient ((cctx, vctx) : ctx) (qid_name : string) :
+    Ext.quotient_inductive_entry_def -> constr_ctx * (string * Int.quotient) =
  fun (QuotIndEntryDef (_, id, e_tau)) ->
   let rec destruct_tau = function
     | Int.Pi (arg, i_tau)       ->
@@ -131,74 +139,55 @@ let elab_quotient (cctx : constr_ctx) (vctx : var_ctx) :
     | Int.Eq { tm_ltm; tm_rtm } -> ([], tm_ltm, tm_rtm)
     | _                         -> raise (InvalidQITQuotient (id, e_tau))
   in
-  let qit_args, qit_lhs, qit_rhs = destruct_tau (elab_tm cctx vctx e_tau) in
-  (id, Int.{ qit_args = List.rev qit_args; qit_lhs; qit_rhs })
+  let qit_args, qit_lhs, qit_rhs = destruct_tau (elab_tm (cctx, vctx) e_tau) in
+  ( Map.add_exn cctx ~key:id ~data:(Either.Second qid_name),
+    (id, Int.{ qit_args = List.rev qit_args; qit_lhs; qit_rhs })
+  )
 
-let elab_qit_def (cctx : constr_ctx) (vctx : var_ctx) :
-    Ext.quotient_inductive_def -> Int.qit_def =
+let elab_qit_def ((cctx, vctx) : ctx) :
+    Ext.quotient_inductive_def -> ctx * Int.qit_def =
  fun (Ext.QuotIndDef e_quot) ->
-  let rec destruct_kappa = function
-    | Int.Pi (idxed, i_tau) ->
-        let idxeds, lv = destruct_kappa i_tau in
-        (idxed :: idxeds, lv)
-    | Int.U (lv, _)         -> ([], lv)
+  let rec destruct_kappa idxeds = function
+    | Int.Pi (idxed, i_tau) -> destruct_kappa (idxed :: idxeds) i_tau
+    | Int.U (lv, _)         -> (lv, idxeds)
     | _                     ->
         raise (InvalidQITKind (e_quot.quot_id, e_quot.quot_kind))
   in
-  let f vctx (id, e_t) = (vctx_add vctx id, elab_tm cctx vctx e_t) in
-  let vctx, i_idxs = List.fold_map ~f ~init:vctx e_quot.quot_indices in
-  let i_idxeds, lv = destruct_kappa (elab_tm cctx vctx e_quot.quot_kind) in
-  Int.
-    {
-      qit_name = Loc.put e_quot.quot_loc e_quot.quot_id;
-      qit_index = List.rev i_idxs;
-      qit_indexed = List.rev i_idxeds;
-      qit_ret_lv = lv;
-      qit_constr =
-        List.map ~f:(elab_constructor cctx vctx) e_quot.quot_constrs
-        |> Map.of_alist_exn (module String);
-      qit_quot =
-        List.map ~f:(elab_quotient cctx vctx) e_quot.quot_quotients
-        |> Map.of_alist_exn (module String);
-    }
-  
-
-let build_constr_ctx : Ext.quotient_inductive_def list -> constr_ctx =
-  let f ctx (Ext.QuotIndDef e_quot) =
-    let extend_with m f d =
-      let combine ~key v0 v1 = raise (DuplicatedConstrIds (key, (v0, v1))) in
-      d
-      |> List.map ~f:(fun (Ext.QuotIndEntryDef (_, x, _)) ->
-             (x, f e_quot.quot_id)
-         )
-      |> Map.of_alist_exn (module String)
-      |> Map.merge_skewed m ~combine
-    in
-    let ctx = extend_with ctx Either.first e_quot.quot_constrs in
-    let ctx = extend_with ctx Either.second e_quot.quot_quotients in
-    ctx
+  let elab_idx vctx (id, e_t) =
+    (vctx_add_local vctx id, elab_tm (cctx, vctx) e_t)
   in
-  List.fold_left ~f ~init:(Map.empty (module String))
-
-let build_var_ctx (e_fds : Ext.fun_def list)
-    (e_qis : Ext.quotient_inductive_def list) : var_ctx =
-  let f vctx (Ext.FunDef (_, id, _, _)) =
-    Map.add_exn vctx ~key:id ~data:[ None ]
+  let qit_name = Loc.put e_quot.quot_loc e_quot.quot_id in
+  let local_vctx, qit_index =
+    List.fold_map ~f:elab_idx ~init:vctx e_quot.quot_indices
+    |> Tuple2.map2 ~f:List.rev
   in
-  let vctx = List.fold_left ~f ~init:(Map.empty (module String)) e_fds in
-  let f vctx (Ext.QuotIndDef e_quot) =
-    Map.add_exn vctx ~key:e_quot.quot_id ~data:[ None ]
+  let qit_ret_lv, qit_indexed =
+    elab_tm (cctx, local_vctx) e_quot.quot_kind |> destruct_kappa []
   in
-  List.fold_left ~f ~init:vctx e_qis
+  let local_vctx = vctx_add_global local_vctx e_quot.quot_id in
+  let folder_with f cctx = f (cctx, local_vctx) e_quot.quot_id in
+  let cctx, qit_constr =
+    List.fold_map
+      ~f:(folder_with elab_constructor)
+      ~init:cctx e_quot.quot_constrs
+    |> Tuple2.map2 ~f:(Map.of_alist_exn (module String))
+  in
+  let cctx, qit_quot =
+    List.fold_map ~f:(folder_with elab_quotient) ~init:cctx e_quot.quot_constrs
+    |> Tuple2.map2 ~f:(Map.of_alist_exn (module String))
+  in
+  ( (cctx, vctx_add_global vctx e_quot.quot_id),
+    Int.{ qit_name; qit_index; qit_indexed; qit_ret_lv; qit_constr; qit_quot }
+  )
 
 let elab_module_def (Ext.ModDef stmts) : Int.module_def =
-  let separator = function
-    | Ext.TopFunDef t  -> Either.First t
-    | Ext.TopQuotInd t -> Either.Second t
+  let f ctx = function
+    | Ext.TopFunDef e_t  ->
+        let var_ctx, i_t = elab_fun_def ctx e_t in
+        ((fst ctx, var_ctx), Int.Fun i_t)
+    | Ext.TopQuotInd e_t ->
+        let ctx, i_t = elab_qit_def ctx e_t in
+        (ctx, Int.Qit i_t)
   in
-  let e_fds, e_qis = List.partition_map ~f:separator stmts in
-  let cctx = build_constr_ctx e_qis in
-  let vctx = build_var_ctx e_fds e_qis in
-  let i_qis = List.map ~f:(elab_qit_def cctx vctx) e_qis in
-  let i_fds = List.map ~f:(elab_fun_def cctx vctx) e_fds in
-  Int.{ fun_defs = i_fds; qit_defs = i_qis }
+  let init = (Map.empty (module String), Map.empty (module String)) in
+  stmts |> List.fold_map ~f ~init |> snd
