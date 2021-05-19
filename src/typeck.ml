@@ -32,7 +32,7 @@ let check_convertible (g : T.env) (s : T.tm) (t : T.tm) : bool =
 
 (** get the type of a typed term.  *)
 let rec get_ty (g : T.env) (t : T.tm) : T.ty =
-  match t with
+  match T.push_subst t with
   | T.U (i, _)              -> T.U (i + 1, loc_dummy)
   | T.Glob n                ->
       let _, tp, _ = T.env_glookup g (loc_data n) in
@@ -62,7 +62,7 @@ let rec get_ty (g : T.env) (t : T.tm) : T.ty =
       let tt = get_ty g t in
       T.Eq { tm_lty = tt; tm_rty = tt; tm_ltm = t; tm_rtm = t }
   | T.Subst (t, s)          ->
-     raise NotImplemented
+     raise Impossible
 
 (** synthesize a type from untyped AST based on a typing environment
  * to a typed term and its (typed) type
