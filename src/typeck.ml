@@ -11,6 +11,8 @@ exception ExpectPi of T.ty * loc
 (** DuplicatedDefinition (n1, n2) where n1 is the original definition and n2 is the conflicting definition *)
 exception DuplicatedDefinition of string location * string location
 
+exception QuotientPatternWithVar of string location
+
 exception NotConvertible of T.tm * T.tm * loc
 
 let whnf_red (_g : T.env) (_t : T.tm) : T.tm = raise NotImplemented
@@ -124,22 +126,39 @@ let rec type_syn (g : T.env) (t : A.tm) : T.tm * T.ty =
 
 and type_check (g : T.env) (e : A.tm) (et : T.ty) : T.tm =
   match e with
-  | A.Case (s, _cs, _eqs, loc) ->
-      let s', _st = type_syn g s in
-      let cs' =
-        raise NotImplemented
-        (* TODO: Implement constructor branches checkings *)
-      in
-      let eqs' =
-        raise NotImplemented
-        (* TODO: Implement quotient branches checkings *)
-      in
+  | A.Case (s, cs, _eqs, loc) ->
+      let s', st = type_syn g s in
+      (* TODO: propagate constraints if needed *)
+      let cs' = List.map ~f:(constr_case_check g (st, et)) cs in
+      let eqs' = List.map ~f:(quotient_case_check g (st, et)) cs in
       T.Case (et, s', cs', eqs', loc)
-  | _ ->
+  | _                         ->
       let e', et' = type_syn g e in
       check_convertible_exn g et' et;
       e'
 
-and constr_case_check (_g : T.env) ((_p, _e) : A.pattern * A.tm)
-    ((_pt, _et) : T.ty * T.ty) : T.pattern * T.tm =
-  raise NotImplemented
+and constr_case_check (g : T.env) ((_pt, et) : T.ty * T.ty)
+    ((p, e) : A.pattern * A.tm) : T.pattern * T.tm =
+  match p with
+  | A.PVar n              -> (T.PVar n, type_check g e et)
+  | A.PCase (A.IndCase _) -> raise NotImplemented
+  | A.PCase (A.EqCase _)  -> raise NotImplemented
+
+and quotient_case_check (_g : T.env) ((_pt, _et) : T.ty * T.ty)
+    ((p, _e) : A.pattern * A.tm) : T.pattern * T.tm =
+  (* let el = check_is_ty g et in
+   * let eq_t =
+   *   T.(
+   *     Eq
+   *       {
+   *         tm_lty = U (el, loc_dummy);
+   *         tm_rty = U (el, loc_dummy);
+   *         tm_ltm = et;
+   *         tm_rtm = et;
+   *       }
+   *   )
+   * in *)
+  match p with
+  | A.PVar n              -> raise (QuotientPatternWithVar (Loc.map n (Option.value ~default:"_")))
+  | A.PCase (A.IndCase _) -> raise NotImplemented
+  | A.PCase (A.EqCase _)  -> raise NotImplemented
