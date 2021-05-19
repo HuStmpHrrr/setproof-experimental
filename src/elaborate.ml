@@ -29,13 +29,15 @@ let rec elab_tm (cctx : constr_ctx) (vctx : var_ctx) : Ext.tm -> Int.tm =
       match Map.find cctx id with
       | Some (First tid)  -> Int.Constr (tid, Loc.put loc id)
       | Some (Second tid) -> Int.EqConstr (tid, Loc.put loc id)
-      | None              -> raise (UnknownConstrId (id, loc)))
+      | None              -> raise (UnknownConstrId (id, loc))
+    )
   | Ext.TmVar (loc, id) -> (
       let open Option in
       match Map.find vctx id >>= List.hd with
       | Some (Some idx) -> Int.Var (idx, Loc.put loc (Some id))
       | Some None       -> Int.Glob (Loc.put loc id)
-      | None            -> raise (UnknownVarId (id, loc)))
+      | None            -> raise (UnknownVarId (id, loc))
+    )
   | Ext.TmLam (loc, id, e_tau, e_t) ->
       let vctx' = vctx_add vctx id in
       Int.Lam (elab_tm cctx vctx e_tau, elab_tm cctx vctx' e_t, loc)
@@ -47,7 +49,8 @@ let rec elab_tm (cctx : constr_ctx) (vctx : var_ctx) : Ext.tm -> Int.tm =
         ( elab_tm cctx vctx e_scr,
           List.map ~f:(elab_branch cctx vctx) e_cstr_bs,
           List.map ~f:(elab_branch cctx vctx) e_quot_bs,
-          loc )
+          loc
+        )
   | Ext.TmApp (_, e_f, e_a) ->
       Int.App (elab_tm cctx vctx e_f, elab_tm cctx vctx e_a)
   | Ext.TmEq (_, e_lhs, e_rhs) ->
@@ -63,9 +66,10 @@ and elab_branch (cctx : constr_ctx) (vctx : var_ctx) :
 
 and elab_pattern (cctx : constr_ctx) (vctx : var_ctx) :
     Ext.pattern -> var_ctx * Int.pattern = function
-  | Ext.PatWildcard loc        -> (vctx_shift1 vctx, Int.PVar (Loc.put loc None))
   | Ext.PatVar (loc, id)       ->
-      (vctx_add vctx id, Int.PVar (Loc.put loc (Some id)))
+      if String.equal id "_"
+      then (vctx_shift1 vctx, Int.PVar (Loc.put loc None))
+      else (vctx_add vctx id, Int.PVar (Loc.put loc (Some id)))
   | Ext.PatInd (loc, id, e_ps) ->
       let tid =
         let open Option in
@@ -78,7 +82,12 @@ and elab_pattern (cctx : constr_ctx) (vctx : var_ctx) :
       ( vctx,
         Int.PCase
           (Int.IndCase
-             { tm_ind_name = tid; tm_constr = Loc.put loc id; tm_args = List.rev i_ps })
+             {
+               tm_ind_name = tid;
+               tm_constr = Loc.put loc id;
+               tm_args = List.rev i_ps;
+             }
+          )
       )
   | Ext.PatEq (_, e_p)         ->
       let vctx, i_p = elab_pattern cctx vctx e_p in
@@ -87,16 +96,14 @@ and elab_pattern (cctx : constr_ctx) (vctx : var_ctx) :
 let elab_fun_def (cctx : constr_ctx) (vctx : var_ctx) :
     Ext.fun_def -> Int.fun_def =
  fun (Ext.FunDef (loc, id, e_tau, e_t)) ->
-  Int.
-    {
-      fun_name = Loc.put loc id;
-      fun_type = elab_tm cctx vctx e_tau;
-      fun_body = elab_tm cctx vctx e_t;
-    }
+  let fun_name = Loc.put loc id in
+  let fun_type = elab_tm cctx vctx e_tau in
+  let fun_body = elab_tm cctx vctx e_t in
+  Int.{ fun_name; fun_type; fun_body }
 
 let elab_constructor (cctx : constr_ctx) (vctx : var_ctx) :
     Ext.quotient_inductive_entry_def -> string * (Int.telescope * Int.tm list) =
-  fun (QuotIndEntryDef (_, id, e_tau)) ->
+ fun (QuotIndEntryDef (_, id, e_tau)) ->
   let tid = Map.find_exn cctx id |> Either.value in
   let rec destruct_apps acc = function
     | Int.App (i_tau, idx) -> destruct_apps (idx :: acc) i_tau
@@ -129,42 +136,46 @@ let elab_quotient (cctx : constr_ctx) (vctx : var_ctx) :
 
 let elab_qit_def (cctx : constr_ctx) (vctx : var_ctx) :
     Ext.quotient_inductive_def -> Int.qit_def =
- fun (Ext.QuotIndDef (loc, id, e_idxs, e_kappa, e_cstrs, e_quots)) ->
+ fun (Ext.QuotIndDef e_quot) ->
   let rec destruct_kappa = function
     | Int.Pi (idxed, i_tau) ->
         let idxeds, lv = destruct_kappa i_tau in
         (idxed :: idxeds, lv)
     | Int.U (lv, _)         -> ([], lv)
-    | _                     -> raise (InvalidQITKind (id, e_kappa))
+    | _                     ->
+        raise (InvalidQITKind (e_quot.quot_id, e_quot.quot_kind))
   in
   let f vctx (id, e_t) = (vctx_add vctx id, elab_tm cctx vctx e_t) in
-  let vctx, i_idxs = List.fold_map ~f ~init:vctx e_idxs in
-  let i_idxeds, lv = destruct_kappa (elab_tm cctx vctx e_kappa) in
+  let vctx, i_idxs = List.fold_map ~f ~init:vctx e_quot.quot_indices in
+  let i_idxeds, lv = destruct_kappa (elab_tm cctx vctx e_quot.quot_kind) in
   Int.
     {
-      qit_name = Loc.put loc id;
+      qit_name = Loc.put e_quot.quot_loc e_quot.quot_id;
       qit_index = List.rev i_idxs;
       qit_indexed = List.rev i_idxeds;
       qit_ret_lv = lv;
       qit_constr =
-        List.map ~f:(elab_constructor cctx vctx) e_cstrs
+        List.map ~f:(elab_constructor cctx vctx) e_quot.quot_constrs
         |> Map.of_alist_exn (module String);
       qit_quot =
-        List.map ~f:(elab_quotient cctx vctx) e_quots
+        List.map ~f:(elab_quotient cctx vctx) e_quot.quot_quotients
         |> Map.of_alist_exn (module String);
     }
+  
 
 let build_constr_ctx : Ext.quotient_inductive_def list -> constr_ctx =
-  let f ctx (Ext.QuotIndDef (_, id, _, _, e_cstrs, e_quots)) =
+  let f ctx (Ext.QuotIndDef e_quot) =
     let extend_with m f d =
       let combine ~key v0 v1 = raise (DuplicatedConstrIds (key, (v0, v1))) in
       d
-      |> List.map ~f:(fun (Ext.QuotIndEntryDef (_, x, _)) -> (x, f id))
+      |> List.map ~f:(fun (Ext.QuotIndEntryDef (_, x, _)) ->
+             (x, f e_quot.quot_id)
+         )
       |> Map.of_alist_exn (module String)
       |> Map.merge_skewed m ~combine
     in
-    let ctx = extend_with ctx Either.first e_cstrs in
-    let ctx = extend_with ctx Either.second e_quots in
+    let ctx = extend_with ctx Either.first e_quot.quot_constrs in
+    let ctx = extend_with ctx Either.second e_quot.quot_quotients in
     ctx
   in
   List.fold_left ~f ~init:(Map.empty (module String))
@@ -175,8 +186,8 @@ let build_var_ctx (e_fds : Ext.fun_def list)
     Map.add_exn vctx ~key:id ~data:[ None ]
   in
   let vctx = List.fold_left ~f ~init:(Map.empty (module String)) e_fds in
-  let f vctx (Ext.QuotIndDef (_, id, _, _, _, _)) =
-    Map.add_exn vctx ~key:id ~data:[ None ]
+  let f vctx (Ext.QuotIndDef e_quot) =
+    Map.add_exn vctx ~key:e_quot.quot_id ~data:[ None ]
   in
   List.fold_left ~f ~init:vctx e_qis
 

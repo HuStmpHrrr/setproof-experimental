@@ -64,7 +64,6 @@ let gen_lexer lexbuf =
       | "," -> const lexbuf Token.SYM_COMMA
       | ";" -> const lexbuf Token.SYM_SEMI
       | "=" -> const lexbuf Token.SYM_EQ
-      | "_" -> const lexbuf Token.SYM_UNDERSCORE
       | "_" | id_start, Star id_continue ->
           let tok = Sedlexing.Utf8.lexeme lexbuf in
           if Char.is_uppercase (String.get tok 0)
