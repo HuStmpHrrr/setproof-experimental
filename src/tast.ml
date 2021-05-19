@@ -30,9 +30,20 @@ type tm =
   | App of tm * tm
   | Constr   of string * string location
   | EqConstr of string * string location
-  | Case     of ty * tm * (pattern * tm) list * loc
+  | Case     of ty * tm * (pattern * tm) list * (pattern * tm) list * loc
   | Refl     of tm * loc  (* location for the refl header *)
+  | Subst    of tm * subst
 and ty = tm
+and subst =
+  (** G,D |- Proj i : G, where |D| = i
+   * notice that i can be negative
+   *)
+  | Proj of int
+  (** G |- s : D  G |- t : S[s]  |D'| = i
+   *  -----------------------------------
+   *  G, D' |- Cons (s, t, i) : D, S
+   *)
+  | Cons of subst * tm * int
 
 type telescope = ty list
 
@@ -51,9 +62,6 @@ and quotient = {
     qit_lhs  : tm;
     qit_rhs  : tm;
   }
-
-(* DuplicatedDefinition (n1, n2) where n1 is the original definition and n2 is the conflicting definition *)
-exception DuplicatedDefinition of string location * string location
 
 (* various kinds of global definitions *)
 type globdef =
@@ -77,17 +85,101 @@ type env = {
 (** location info for a term *)
 let rec tm_loc t : loc =
   match t with
-  | U (_, l)          -> l
-  | Glob n            -> loc_erase n
-  | Var (_, n)        -> loc_erase n
-  | Pi (a, b)         -> loc_combine (tm_loc a) (tm_loc b)
-  | Eq eq             -> loc_combine (tm_loc eq.tm_ltm) (tm_loc eq.tm_rtm)
-  | Lam (_, t, l)     -> loc_combine l (tm_loc t)
-  | App (l, r)        -> loc_combine (tm_loc l) (tm_loc r)
+  | U (_, l)             -> l
+  | Glob n               -> loc_erase n
+  | Var (_, n)           -> loc_erase n
+  | Pi (a, b)            -> loc_combine (tm_loc a) (tm_loc b)
+  | Eq eq                -> loc_combine (tm_loc eq.tm_ltm) (tm_loc eq.tm_rtm)
+  | Lam (_, t, l)        -> loc_combine l (tm_loc t)
+  | App (l, r)           -> loc_combine (tm_loc l) (tm_loc r)
   | Constr (_, n)
-    | EqConstr (_, n) -> loc_erase n
-  | Case (_, _, _, l) -> l
-  | Refl (t, l)       -> loc_combine l (tm_loc t)
+    | EqConstr (_, n)    -> loc_erase n
+  | Case (_, _, _, _, l) -> l
+  | Refl (t, l)          -> loc_combine l (tm_loc t)
+  | Subst (t, _)         -> tm_loc t
+
+(** substitution operations *)
+module Subst = struct
+
+  let id_subst = Proj 0
+
+  let is_id_subst t : bool =
+    match t with
+    | Proj 0 -> true
+    | _ -> false
+
+  (** compute s1 . s2
+   *  t [ s1 ] [ s2 ] = t [ s1 . s2 ]
+   *)
+  let rec compose s1 s2 : subst =
+    (* assume G |- t : A *)
+    match s1 with
+    | Proj i ->
+       (* s1 = p^i *)
+       (* returns p^f . s2 . p^b *)
+       let rec helper s2 f b =
+         match s2 with
+         | Proj j           -> Proj (f + j + b)
+         | Cons (s2', t, j) ->
+            (* s2 = (s2', t) . p^j *)
+            if f > 0 then
+              (* p^f . (s2', t) . p^j . p^b = p^(f - 1) . s2' . p^(j + b)  *)
+              helper s2' (f - 1) (j + b)
+            else                (* f = 0, so p^f is identity *)
+              Cons (s2', t, j + b)
+       in
+       helper s2 i 0
+    | Cons (s1', t, i) ->
+       (* s1 = (s1', t) . p^i *)
+       (* returns (s1', t) . p^f . s2 . p^b *)
+       let rec helper s2 f b =
+         match s2 with
+         | Proj j           -> Cons (s1', t, f + j + b)
+         | Cons (s2', t, j) ->
+            (* (s1', t) . p^f . (s2', t) . p^j . p^b *)
+            if f > 0 then
+              (* (s1', t) . p^(f - 1) . s2' . p^j . p^b *)
+              helper s2' (f - 1) (j + b)
+            else                (* f = 0 *)
+              (* (s1', t) . (s2', t) . p^j . p^b = (s1' . (s2', t) , t[(s2', t)]) . p^(j + b) *)
+              let s' = Cons (s2', t, 0) in
+              Cons (compose s1' s', apply_subst t s', j + b)
+       in
+       helper s2 i 0
+
+  and apply_subst t s : tm =
+    if is_id_subst s then t
+    else
+      match t with
+      | U (_, _)
+        | Glob _      -> t
+      | Var (x, n)    -> apply_subst_var x n s
+      | Subst (t, s') -> Subst (t, compose s' s)
+      | t             -> Subst (t, s)
+
+  (** s : G -> D, x in D, then return x[s] : G |- A *)
+  and apply_subst_var x n s : tm =
+    match s with
+    (* s : G, D -> G, x in G *)
+    | Proj i -> Var (x + i, n)
+    (* i : G, D -> G, s : G -> G', t : G |- A, x in G',A *)
+    | Cons (s, t, i) ->
+       if x = 0 then apply_subst t (Proj i)
+       else
+         apply_subst (apply_subst_var (x - 1) n s) (Proj i)
+
+  (**
+   * G |- t : T
+   * ---------------------------------
+   * G, D |- shift t |D| : shift T |D|
+   *)
+  let shift t k : tm = apply_subst t (Proj k)
+
+  let subst t s : tm = apply_subst t (Cons (id_subst, s, 0))
+
+end
+
+include Subst
 
 (** count number of vars in a case pattern *)
 let rec case_vars c : int =
@@ -98,69 +190,6 @@ and pattern_vars p  : int =
   match p with
   | PVar _     -> 1
   | PCase c    -> case_vars c
-
-(** shift_gen t by k if the de Bruijn index >= l *)
-let rec shift_gen t k l : tm =
-  match t with
-  | U (_, _)
-    | Glob _          -> t
-  | Var (i, n)        ->
-     if i >= l then Var (i + k, n) else t
-  | Pi (a, b)         ->
-     Pi (shift_gen a k l, shift_gen b k (1 + l))
-  | Eq e              -> Eq {
-                             tm_lty = shift_gen e.tm_lty k l;
-                             tm_rty = shift_gen e.tm_rty k l;
-                             tm_ltm = shift_gen e.tm_ltm k l;
-                             tm_rtm = shift_gen e.tm_rtm k l;
-                           }
-  | Lam (a, t, loc)   -> Lam (shift_gen a k l, shift_gen t k (l + 1), loc)
-  | App (t, s)        -> App (shift_gen t k l, shift_gen s k l)
-  | Constr (_, _)
-    | EqConstr (_, _) -> t
-  | Case (a, t, ps, loc) -> Case (shift_gen a k l,
-                                  shift_gen t k l,
-                                  List.map ps ~f:(fun (p, t') -> (p, shift_gen t' k (l + pattern_vars p))),
-                                  loc)
-  | Refl (t, loc)     -> Refl (shift_gen t k l, loc)
-
-(**
- * G |- t : T
- * ---------------------------------
- * G, D |- shift t |D| : shift T |D|
- *)
-let shift t k : tm = shift_gen t k 0
-
-(** substitute variables k in t for s shifted by k
- *
- * G, S, D |- t          : T   G |- s : S
- * -------------------------------------
- * G, D |- t [ s / |D| ] : T [ s / |D| ]
- *)
-let rec subst_gen t k s  : tm =
-  match t with
-  | U (_, _)
-    | Glob _             -> t
-  | Var (i, _)           ->
-     if Int.(i = k) then shift s k else t
-  | Pi (a, b)            -> Pi (subst_gen a k s, subst_gen b (1 + k) s)
-  | Eq e                 -> Eq {
-                             tm_lty = subst_gen e.tm_lty k s;
-                             tm_rty = subst_gen e.tm_rty k s;
-                             tm_ltm = subst_gen e.tm_ltm k s;
-                             tm_rtm = subst_gen e.tm_rtm k s;
-                           }
-  | Lam (a, t, loc)      -> Lam (subst_gen a k s, subst_gen t (1 + k) s, loc)
-  | App (t, t')          -> App (subst_gen t k s, subst_gen t' k s)
-  | Constr (_, _)
-    | EqConstr (_, _)    -> t
-  | Case (a, t, ps, loc) -> Case (subst_gen a k s,
-                                  subst_gen t k s,
-                                  List.map ps ~f:(fun (p, t') -> (p, subst_gen t' (k + pattern_vars p) s)),
-                                  loc)
-  | Refl (t, loc)        -> Refl (subst_gen t k s, loc)
-
-let subst t s : tm = subst_gen t 0 s
 
 let env_glookup_opt (g : env) (n : string) : (globdef * ty * loc) option =
   Map.find g.glob n
