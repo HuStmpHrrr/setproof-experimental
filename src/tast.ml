@@ -30,7 +30,7 @@ type tm =
   | App of tm * tm
   | Constr   of string * string location
   | EqConstr of string * string location
-  | Case     of ty * tm * (pattern * tm) list * loc
+  | Case     of ty * tm * (pattern * tm) list * (pattern * tm) list * loc
   | Refl     of tm * loc  (* location for the refl header *)
 and ty = tm
 
@@ -77,17 +77,17 @@ type env = {
 (** location info for a term *)
 let rec tm_loc t : loc =
   match t with
-  | U (_, l)          -> l
-  | Glob n            -> loc_erase n
-  | Var (_, n)        -> loc_erase n
-  | Pi (a, b)         -> loc_combine (tm_loc a) (tm_loc b)
-  | Eq eq             -> loc_combine (tm_loc eq.tm_ltm) (tm_loc eq.tm_rtm)
-  | Lam (_, t, l)     -> loc_combine l (tm_loc t)
-  | App (l, r)        -> loc_combine (tm_loc l) (tm_loc r)
+  | U (_, l)             -> l
+  | Glob n               -> loc_erase n
+  | Var (_, n)           -> loc_erase n
+  | Pi (a, b)            -> loc_combine (tm_loc a) (tm_loc b)
+  | Eq eq                -> loc_combine (tm_loc eq.tm_ltm) (tm_loc eq.tm_rtm)
+  | Lam (_, t, l)        -> loc_combine l (tm_loc t)
+  | App (l, r)           -> loc_combine (tm_loc l) (tm_loc r)
   | Constr (_, n)
-    | EqConstr (_, n) -> loc_erase n
-  | Case (_, _, _, l) -> l
-  | Refl (t, l)       -> loc_combine l (tm_loc t)
+    | EqConstr (_, n)    -> loc_erase n
+  | Case (_, _, _, _, l) -> l
+  | Refl (t, l)          -> loc_combine l (tm_loc t)
 
 (** count number of vars in a case pattern *)
 let rec case_vars c : int =
@@ -103,26 +103,29 @@ and pattern_vars p  : int =
 let rec shift_gen t k l : tm =
   match t with
   | U (_, _)
-    | Glob _          -> t
-  | Var (i, n)        ->
+    | Glob _                   -> t
+  | Var (i, n)                 ->
      if i >= l then Var (i + k, n) else t
-  | Pi (a, b)         ->
+  | Pi (a, b)                  ->
      Pi (shift_gen a k l, shift_gen b k (1 + l))
-  | Eq e              -> Eq {
-                             tm_lty = shift_gen e.tm_lty k l;
-                             tm_rty = shift_gen e.tm_rty k l;
-                             tm_ltm = shift_gen e.tm_ltm k l;
-                             tm_rtm = shift_gen e.tm_rtm k l;
-                           }
-  | Lam (a, t, loc)   -> Lam (shift_gen a k l, shift_gen t k (l + 1), loc)
-  | App (t, s)        -> App (shift_gen t k l, shift_gen s k l)
+  | Eq e                       -> Eq {
+                                      tm_lty = shift_gen e.tm_lty k l;
+                                      tm_rty = shift_gen e.tm_rty k l;
+                                      tm_ltm = shift_gen e.tm_ltm k l;
+                                      tm_rtm = shift_gen e.tm_rtm k l;
+                                    }
+  | Lam (a, t, loc)            -> Lam (shift_gen a k l, shift_gen t k (l + 1), loc)
+  | App (t, s)                 -> App (shift_gen t k l, shift_gen s k l)
   | Constr (_, _)
-    | EqConstr (_, _) -> t
-  | Case (a, t, ps, loc) -> Case (shift_gen a k l,
-                                  shift_gen t k l,
-                                  List.map ps ~f:(fun (p, t') -> (p, shift_gen t' k (l + pattern_vars p))),
-                                  loc)
-  | Refl (t, loc)     -> Refl (shift_gen t k l, loc)
+    | EqConstr (_, _)          -> t
+  | Case (a, t, cps, qps, loc) -> Case
+                                    ( shift_gen a k l,
+                                      shift_gen t k l,
+                                      List.map cps ~f:(fun (p, t') -> (p, shift_gen t' k (l + pattern_vars p))),
+                                      List.map qps ~f:(fun (p, t') -> (p, shift_gen t' k (l + pattern_vars p))),
+                                      loc
+                                    )
+  | Refl (t, loc)              -> Refl (shift_gen t k l, loc)
 
 (**
  * G |- t : T
@@ -140,25 +143,28 @@ let shift t k : tm = shift_gen t k 0
 let rec subst_gen t k s  : tm =
   match t with
   | U (_, _)
-    | Glob _             -> t
-  | Var (i, _)           ->
+    | Glob _                   -> t
+  | Var (i, _)                 ->
      if Int.(i = k) then shift s k else t
-  | Pi (a, b)            -> Pi (subst_gen a k s, subst_gen b (1 + k) s)
-  | Eq e                 -> Eq {
-                             tm_lty = subst_gen e.tm_lty k s;
-                             tm_rty = subst_gen e.tm_rty k s;
-                             tm_ltm = subst_gen e.tm_ltm k s;
-                             tm_rtm = subst_gen e.tm_rtm k s;
-                           }
-  | Lam (a, t, loc)      -> Lam (subst_gen a k s, subst_gen t (1 + k) s, loc)
-  | App (t, t')          -> App (subst_gen t k s, subst_gen t' k s)
+  | Pi (a, b)                  -> Pi (subst_gen a k s, subst_gen b (1 + k) s)
+  | Eq e                       -> Eq {
+                                   tm_lty = subst_gen e.tm_lty k s;
+                                   tm_rty = subst_gen e.tm_rty k s;
+                                   tm_ltm = subst_gen e.tm_ltm k s;
+                                   tm_rtm = subst_gen e.tm_rtm k s;
+                                 }
+  | Lam (a, t, loc)            -> Lam (subst_gen a k s, subst_gen t (1 + k) s, loc)
+  | App (t, t')                -> App (subst_gen t k s, subst_gen t' k s)
   | Constr (_, _)
-    | EqConstr (_, _)    -> t
-  | Case (a, t, ps, loc) -> Case (subst_gen a k s,
-                                  subst_gen t k s,
-                                  List.map ps ~f:(fun (p, t') -> (p, subst_gen t' (k + pattern_vars p) s)),
-                                  loc)
-  | Refl (t, loc)        -> Refl (subst_gen t k s, loc)
+    | EqConstr (_, _)          -> t
+  | Case (a, t, cps, qps, loc) -> Case
+                                    ( subst_gen a k s,
+                                      subst_gen t k s,
+                                      List.map cps ~f:(fun (p, t') -> (p, subst_gen t' (k + pattern_vars p) s)),
+                                      List.map qps ~f:(fun (p, t') -> (p, subst_gen t' (k + pattern_vars p) s)),
+                                      loc
+                                    )
+  | Refl (t, loc)              -> Refl (subst_gen t k s, loc)
 
 let subst t s : tm = subst_gen t 0 s
 

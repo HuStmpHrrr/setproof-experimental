@@ -54,7 +54,7 @@ let rec get_ty (g : T.env) (t : T.tm) : T.ty =
     )
   | T.Constr (qn, n)     -> T.get_constr_ty g qn n
   | T.EqConstr (qn, n)   -> T.get_eqconstr_ty g qn n
-  | T.Case (tp, _, _, _) -> tp
+  | T.Case (tp, _, _, _, _) -> tp
   | T.Refl (t, _)        ->
       let tt = get_ty g t in
       T.Eq { tm_lty = tt; tm_rty = tt; tm_ltm = t; tm_rtm = t }
