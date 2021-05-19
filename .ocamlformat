@@ -4,6 +4,7 @@ align-variants-decl = true
 break-cases = all
 break-infix = fit-or-vertical
 break-infix-before-func = true
+doc-comments = before
 exp-grouping = preserve
 if-then-else = keyword-first
 indicate-multiline-delimiters = closing-on-separate-line

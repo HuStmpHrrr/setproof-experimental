@@ -7,9 +7,9 @@ exception VariableNotFound of string location
 exception TypeExpected of T.tm
 exception EqDiffLevel of T.ty * int * T.ty * int
 exception ExpectPi of T.ty * loc
-(* DuplicatedDefinition (n1, n2) where n1 is the original definition and n2 is the conflicting definition *)
-exception DuplicatedDefinition of string location * string location
 
+(** DuplicatedDefinition (n1, n2) where n1 is the original definition and n2 is the conflicting definition *)
+exception DuplicatedDefinition of string location * string location
 
 exception NotConvertible of T.tm * T.tm * loc
 
@@ -141,6 +141,6 @@ and type_check (g : T.env) (e : A.tm) (et : T.ty) : T.tm =
       check_convertible_exn g et' et;
       e'
 
-and constr_case_check (g : T.env) ((p, e) : A.pattern * A.tm)
-    ((pt, et) : T.ty * T.ty) : T.pattern =
+and constr_case_check (_g : T.env) ((_p, _e) : A.pattern * A.tm)
+    ((_pt, _et) : T.ty * T.ty) : T.pattern =
   raise NotImplemented

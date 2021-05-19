@@ -15,11 +15,11 @@ type tm =
   | TmEq     of loc * tm * tm
   | TmRefl   of loc * tm
 
-and ty = tm
 (** Types *)
+and ty = tm
 
-and branch = pattern * tm
 (** Match branches *)
+and branch = pattern * tm
 
 (** Match patterns *)
 and pattern =

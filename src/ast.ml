@@ -56,8 +56,8 @@ type fun_def = {
   fun_body : tm;
 }
 
-type telescope = ty list
 (** a telescope is a reverse context, which is good for unification *)
+type telescope = ty list
 
 type qit_def = {
   qit_name : string location;  (** definition name and location *)
