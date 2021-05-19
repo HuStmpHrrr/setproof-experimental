@@ -61,8 +61,7 @@ let rec get_ty (g : T.env) (t : T.tm) : T.ty =
   | T.Refl (t, _)           ->
       let tt = get_ty g t in
       T.Eq { tm_lty = tt; tm_rty = tt; tm_ltm = t; tm_rtm = t }
-  | T.Subst (t, s)          ->
-     raise Impossible
+  | T.Subst (_t, _s)        -> raise Impossible
 
 (** synthesize a type from untyped AST based on a typing environment
  * to a typed term and its (typed) type
@@ -116,7 +115,7 @@ let rec type_syn (g : T.env) (t : A.tm) : T.tm * T.ty =
     )
   | A.Constr (qn, n) -> (T.Constr (qn, n), T.get_constr_ty g qn n)
   | A.EqConstr (qn, n) -> (T.EqConstr (qn, n), T.get_eqconstr_ty g qn n)
-  | A.Case (_scr, _cs, _qs, _l) -> raise NotImplemented
+  | A.Case (_scr, _cs, _eqs, _l) -> raise NotImplemented
   | A.Refl (t, loc) ->
       let t', tt = type_syn g t in
       ( T.Refl (t', loc),
@@ -125,22 +124,22 @@ let rec type_syn (g : T.env) (t : A.tm) : T.tm * T.ty =
 
 and type_check (g : T.env) (e : A.tm) (et : T.ty) : T.tm =
   match e with
-  | A.Case (s, _cps, _qps, loc) ->
-      let s', st = type_syn g s in
-      let cps' =
+  | A.Case (s, _cs, _eqs, loc) ->
+      let s', _st = type_syn g s in
+      let cs' =
         raise NotImplemented
         (* TODO: Implement constructor branches checkings *)
       in
-      let qps' =
+      let eqs' =
         raise NotImplemented
         (* TODO: Implement quotient branches checkings *)
       in
-      T.Case (s', st, cps', qps', loc)
+      T.Case (et, s', cs', eqs', loc)
   | _ ->
       let e', et' = type_syn g e in
       check_convertible_exn g et' et;
       e'
 
 and constr_case_check (_g : T.env) ((_p, _e) : A.pattern * A.tm)
-    ((_pt, _et) : T.ty * T.ty) : T.pattern =
+    ((_pt, _et) : T.ty * T.ty) : T.pattern * T.tm =
   raise NotImplemented
