@@ -1,11 +1,15 @@
 (library
  (name setproof)
  ; (flags :standard -w -27 -w -33 -w -26 -w -9)
- (modules (:standard \ main))
+ (modules
+  (:standard \ main))
  (libraries base menhirLib ppxlib sedlex stdio)
- (preprocess (pps sedlex.ppx)))
+ (preprocess
+  (pps sedlex.ppx)))
 
-(menhir (flags --table --canonical) (modules grammar))
+(menhir
+ (flags --table --canonical)
+ (modules grammar))
 
 (executable
  (name main)

@@ -72,5 +72,5 @@ end = struct
         && Int.equal l1.start_c l2.start_c
         && Int.equal l1.end_l l2.end_l
         && Int.equal l1.end_c l2.end_c
-    | _ -> false
+    | _                      -> false
 end
