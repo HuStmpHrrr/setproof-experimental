@@ -9,10 +9,8 @@ bug-reports: "https://github.com/HuStmpHrrr/setproof-experimental/issues"
 depends: [
   "base"
   "dune"
-  "menhir"
+  "earley"
   "ocaml" {>= "4.08"}
-  "ppxlib"
-  "sedlex"
   "stdio"
 ]
 build: ["dune" "build" "-j" jobs]

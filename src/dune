@@ -2,10 +2,9 @@
  (name setproof)
  ; (flags :standard -w -27 -w -33 -w -26 -w -9)
  (modules (:standard \ main))
- (libraries base menhirLib ppxlib sedlex stdio)
- (preprocess (pps sedlex.ppx)))
-
-(menhir (flags --table --canonical) (modules grammar))
+ (libraries base earley.core earley.str)
+ (preprocess (per_module
+              ((action (run pa_ocaml.boot %{input-file})) parser))))
 
 (executable
  (name main)
