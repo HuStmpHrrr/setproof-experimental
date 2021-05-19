@@ -80,6 +80,7 @@ module Tuple2 : sig
 
   val map1 : ('a, 'b) t -> f:('a -> 'c) -> ('c, 'b) t
   val map2 : ('a, 'b) t -> f:('b -> 'c) -> ('a, 'c) t
+  val bimap : ('a, 'b) t -> f:('a -> 'c) -> g:('b -> 'd) -> ('c, 'd) t
 
   val curry : (('a, 'b) t -> 'c) -> 'a -> 'b -> 'c
   val uncurry : ('a -> 'b -> 'c) -> ('a, 'b) t -> 'c
@@ -88,6 +89,8 @@ end = struct
 
   let map1 (a, b) ~f = (f a, b)
   let map2 (a, b) ~f = (a, f b)
+
+  let bimap (a, b) ~f ~g = (f a, g b)
 
   let curry f a b = f (a, b)
   let uncurry f (a, b) = f a b
