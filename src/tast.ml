@@ -35,13 +35,17 @@ type tm =
   | Subst    of tm * subst
 and ty = tm
 and subst =
-  (** G,D |- Proj i : G, where |D| = i
+  (**
+   *       |D| = i
+   * -------------------
+   *  G,D |- Proj i : G
+   *
    * notice that i can be negative
    *)
   | Proj of int
-  (** G |- s : D  G |- t : S[s]  |D'| = i
-   *  -----------------------------------
-   *  G, D' |- Cons (s, t, i) : D, S
+  (** G |- s : D   G |- t : S[s]   |D'| = i
+   *  -------------------------------------
+   *    G, D' |- Cons (s, t, i) : D, S
    *)
   | Cons of subst * tm * int
 
@@ -121,7 +125,12 @@ module Subst = struct
   let cons s t : subst = Cons (s, t, 0)
 
   (** compute s1 . s2
-   *  t [ s1 ] [ s2 ] = t [ s1 . s2 ]
+   *  t[s1][s2] = t[s1 . s2]
+   *
+   * G1 |- s1 : G0    G2 |- s2 : G1
+   * ------------------------------
+   *   G2 |- compose s1 s2 : G0
+   *
    *)
   let rec compose s1 s2 : subst =
     (* assume G |- t : A *)
@@ -176,13 +185,16 @@ module Subst = struct
     | Proj i -> Var (x + i, n)
     (* i : G, D -> G, s : G -> G', t : G |- A, x in G',A *)
     | Cons (s, t, i) ->
-       if x = 0 then apply_subst t (Proj i)
-       else
-         apply_subst (apply_subst_var (x - 1) n s) (Proj i)
+       if x = 0
+       (* G', x : A *)
+       then apply_subst t (Proj i)
+       (* x in G' *)
+       else apply_subst (apply_subst_var (x - 1) n s) (Proj i)
 
-  (** s : G -> D
-   *  -----------------------
-   *  lift_n s |G'| : G,G'[s] -> D,G'
+  (**
+   *    s : G -> D   n = |G'|
+   * ----------------------------
+   * lift_n s n : (G, G'[s]) -> (D, G')
    *)
   let lift_n s n : subst =
     if n <= 0 then s
@@ -205,6 +217,11 @@ module Subst = struct
    *)
   let shift t k : tm = apply_subst t (Proj k)
 
+  (**
+   * G, A |- t : T    G |- s : S
+   * ---------------------------
+   * G |- subst t s : shift T S
+   *)
   let subst t s : tm = apply_subst t (Cons (id_subst, s, 0))
 
   (** push substitution inwards *)
@@ -212,30 +229,31 @@ module Subst = struct
     match t with
     | Subst (t, s)            -> elim_top_subst t s
     | _                       -> t
+
   (** eliminate top level Subst of t[s] *)
   and elim_top_subst t s : tm =
     match t with
     | U (_, _)
-      | Glob _                -> t
-    | Var (x, n)              -> push_subst (apply_subst_var x n s)
-    | Pi (a, b)               -> Pi (Subst (a, s), Subst (b, lift s))
-    | Eq e                    -> Eq {
-                                  tm_lty = Subst (e.tm_lty, s);
-                                  tm_rty = Subst (e.tm_rty, s);
-                                  tm_ltm = Subst (e.tm_ltm, s);
-                                  tm_rtm = Subst (e.tm_rtm, s);
-                                }
-    | Lam (a, t, l)           -> Lam (Subst (a, s), Subst (t, lift s), l)
-    | App (t, t')             -> App (Subst (t, s), Subst (t', s))
+      | Glob _                 -> t
+    | Var (x, n)               -> push_subst (apply_subst_var x n s)
+    | Pi (a, b)                -> Pi (Subst (a, s), Subst (b, lift s))
+    | Eq e                     -> Eq {
+                                   tm_lty = Subst (e.tm_lty, s);
+                                   tm_rty = Subst (e.tm_rty, s);
+                                   tm_ltm = Subst (e.tm_ltm, s);
+                                   tm_rtm = Subst (e.tm_rtm, s);
+                                 }
+    | Lam (a, t, l)            -> Lam (Subst (a, s), Subst (t, lift s), l)
+    | App (t, t')              -> App (Subst (t, s), Subst (t', s))
     | Constr (_, _)
-    | EqConstr (_, _)         -> t
-    | Case (a, t, cs, eqs, l) -> Case (Subst (a, s),
-                                       Subst (t, s),
-                                       List.map cs ~f:(fun (p, t) -> p, Subst (t, lift_n s (pattern_vars p))),
-                                       List.map eqs ~f:(fun (p, t) -> p, Subst (t, lift_n s (pattern_vars p))),
-                                       l)
-    | Refl (t, l)             -> Refl (Subst (t, s), l)
-    | Subst (t, s')           -> elim_top_subst t (compose s' s)
+    | EqConstr (_, _)          -> t
+    | Case (at, a, cs, eqs, l) -> Case (Subst (at, s),
+                                        Subst (a, s),
+                                        List.map cs ~f:(fun (p, t) -> p, Subst (t, lift_n s (pattern_vars p))),
+                                        List.map eqs ~f:(fun (p, t) -> p, Subst (t, lift_n s (pattern_vars p))),
+                                        l)
+    | Refl (t, l)              -> Refl (Subst (t, s), l)
+    | Subst (t, s')            -> elim_top_subst t (compose s' s)
 
 end
 
