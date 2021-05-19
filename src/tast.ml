@@ -98,6 +98,16 @@ let rec tm_loc t : loc =
   | Refl (t, l)          -> loc_combine l (tm_loc t)
   | Subst (t, _)         -> tm_loc t
 
+(** count number of vars in a case pattern *)
+let rec case_vars c : int =
+  match c with
+  | IndCase ic -> List.sum (module Int) ic.tm_args ~f:pattern_vars
+  | EqCase p   -> pattern_vars p
+and pattern_vars p  : int =
+  match p with
+  | PVar _     -> 1
+  | PCase c    -> case_vars c
+
 (** substitution operations *)
 module Subst = struct
 
@@ -107,6 +117,8 @@ module Subst = struct
     match t with
     | Proj 0 -> true
     | _ -> false
+
+  let cons s t : subst = Cons (s, t, 0)
 
   (** compute s1 . s2
    *  t [ s1 ] [ s2 ] = t [ s1 . s2 ]
@@ -168,6 +180,24 @@ module Subst = struct
        else
          apply_subst (apply_subst_var (x - 1) n s) (Proj i)
 
+  (** s : G -> D
+   *  -----------------------
+   *  lift_n s |G'| : G,G'[s] -> D,G'
+   *)
+  let lift_n s n : subst =
+    if n <= 0 then s
+    else
+      let rec repeat s m =
+        if m >= 0 then
+          (* TODO: fetch a more meaningful name *)
+          repeat (cons s (Var (m, loc_ghost (Some ("x" ^ Int.to_string m))))) (m - 1)
+        else s
+      in
+      repeat s (n - 1)
+
+  let lift s : subst =
+    lift_n s 1
+
   (**
    * G |- t : T
    * ---------------------------------
@@ -177,19 +207,39 @@ module Subst = struct
 
   let subst t s : tm = apply_subst t (Cons (id_subst, s, 0))
 
+  (** push substitution inwards *)
+  let rec push_subst t : tm =
+    match t with
+    | Subst (t, s)            -> elim_top_subst t s
+    | _                       -> t
+  (** eliminate top level Subst of t[s] *)
+  and elim_top_subst t s : tm =
+    match t with
+    | U (_, _)
+      | Glob _                -> t
+    | Var (x, n)              -> push_subst (apply_subst_var x n s)
+    | Pi (a, b)               -> Pi (Subst (a, s), Subst (b, lift s))
+    | Eq e                    -> Eq {
+                                  tm_lty = Subst (e.tm_lty, s);
+                                  tm_rty = Subst (e.tm_rty, s);
+                                  tm_ltm = Subst (e.tm_ltm, s);
+                                  tm_rtm = Subst (e.tm_rtm, s);
+                                }
+    | Lam (a, t, l)           -> Lam (Subst (a, s), Subst (t, lift s), l)
+    | App (t, t')             -> App (Subst (t, s), Subst (t', s))
+    | Constr (_, _)
+    | EqConstr (_, _)         -> t
+    | Case (a, t, cs, eqs, l) -> Case (Subst (a, s),
+                                       Subst (t, s),
+                                       List.map cs ~f:(fun (p, t) -> p, Subst (t, lift_n s (pattern_vars p))),
+                                       List.map eqs ~f:(fun (p, t) -> p, Subst (t, lift_n s (pattern_vars p))),
+                                       l)
+    | Refl (t, l)             -> Refl (Subst (t, s), l)
+    | Subst (t, s')           -> elim_top_subst t (compose s' s)
+
 end
 
 include Subst
-
-(** count number of vars in a case pattern *)
-let rec case_vars c : int =
-  match c with
-  | IndCase ic -> List.sum (module Int) ic.tm_args ~f:pattern_vars
-  | EqCase p   -> pattern_vars p
-and pattern_vars p  : int =
-  match p with
-  | PVar _     -> 1
-  | PCase c    -> case_vars c
 
 let env_glookup_opt (g : env) (n : string) : (globdef * ty * loc) option =
   Map.find g.glob n
