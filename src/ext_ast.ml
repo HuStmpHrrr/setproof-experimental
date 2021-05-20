@@ -1,6 +1,6 @@
 open Lib
 
-type identifier = string
+type identifier = string [@@deriving show { with_path = false }]
 
 (** Terms *)
 type tm =
@@ -14,25 +14,29 @@ type tm =
   | TmApp    of loc * tm * tm
   | TmEq     of loc * tm * tm
   | TmRefl   of loc * tm
+[@@deriving show { with_path = false }]
 
 (** Types *)
-and ty = tm
+and ty = tm [@@deriving show { with_path = false }]
 
 (** Match branches *)
-and branch = pattern * tm
+and branch = pattern * tm [@@deriving show { with_path = false }]
 
 (** Match patterns *)
 and pattern =
   | PatVar of loc * identifier
   | PatInd of loc * identifier * identifier list
   | PatEq  of loc * identifier
+[@@deriving show { with_path = false }]
 
 (** definition *)
 type fun_def = FunDef of loc * identifier * ty * tm
+[@@deriving show { with_path = false }]
 
 (** Quotient inductive type constructor/quotient *)
 type quotient_inductive_entry_def =
   | QuotIndEntryDef of loc * identifier * ty  (** Entry with name and type *)
+[@@deriving show { with_path = false }]
 
 (** Quotient inductive type declaration *)
 type quotient_inductive_def =
@@ -44,11 +48,14 @@ type quotient_inductive_def =
       quot_constrs : quotient_inductive_entry_def list;
       quot_quotients : quotient_inductive_entry_def list;
     }
+[@@deriving show { with_path = false }]
 
 (** Top statements *)
 type top_statement =
   | TopFunDef  of fun_def
   | TopQuotInd of quotient_inductive_def
+[@@deriving show { with_path = false }]
 
 (** Module definition *)
 type module_def = ModDef of top_statement list
+[@@deriving show { with_path = false }]

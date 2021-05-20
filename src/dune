@@ -2,9 +2,9 @@
  (name setproof)
  (modules
   (:standard \ main))
- (libraries base menhirLib ppxlib sedlex stdio)
+ (libraries base mparser ppxlib ppx_deriving.show stdio)
  (preprocess
-  (pps sedlex.ppx))
+  (pps ppx_deriving.show))
  ; (flags :standard -w -27 -w -33 -w -26 -w -9)
  )
 
@@ -15,7 +15,3 @@
  (modules main)
  ; (flags :standard -w -27 -w -33 -w -26 -w -9)
  )
-
-(menhir
- (flags --table --canonical)
- (modules grammar))

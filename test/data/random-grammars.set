@@ -1,3 +1,7 @@
+{--}
+{- asdqwdwq !da qwld -}
+{- nested {- WR -} asd {- dasd -} -}
+
 x : y := z;
 
 y : z := k;

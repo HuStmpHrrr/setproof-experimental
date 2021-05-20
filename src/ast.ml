@@ -6,10 +6,10 @@ type pattern =
   | PInd of {
       tm_ind_name : string;
       tm_constr : string location;
-      tm_args : string option list;  (** similar to telescope, in reverse order *)
+      tm_args : string option list;
+          (** similar to telescope, in reverse order *)
     }
-  | PEq  of string option location
-     (** wildcard is None, otherwise it's Some *)
+  | PEq  of string option location  (** wildcard is None, otherwise it's Some *)
   | PVar of string option location
 
 type tm =

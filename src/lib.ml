@@ -4,6 +4,8 @@ module StrM = Map.M (String)
 exception Impossible
 exception NotImplemented
 
+let pp_conv pp oc = pp (Caml.Format.formatter_of_out_channel oc)
+
 exception DifferentFileLocations of string * string
 
 (* a data carrying location information *)
@@ -15,12 +17,25 @@ type 'a real_location = {
   end_c : int;
   data : 'a;
 }
+[@@deriving show { with_path = false }]
+
+let real_pp_real_loc ?(with_file = true) fmt l =
+  Caml.Format.fprintf fmt "<loc: %d,%d:%d,%d" l.start_l l.start_c l.end_l
+    l.end_c;
+  if with_file
+  then Caml.Format.fprintf fmt " in %s" l.file;
+  Caml.Format.pp_print_string fmt ">"
 
 type 'a location =
   | RealLoc  of 'a real_location
   | GhostLoc of 'a
+[@@deriving show { with_path = false }]
 
-type loc = unit location
+type loc = unit location [@@deriving show { with_path = false }]
+
+let real_pp_loc fmt = function
+  | RealLoc l   -> real_pp_real_loc fmt l
+  | GhostLoc () -> Caml.Format.fprintf fmt "<loc: booo>"
 
 let loc_dummy : loc = GhostLoc ()
 
