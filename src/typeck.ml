@@ -140,9 +140,9 @@ and type_check (g : T.env) (e : A.tm) (et : T.ty) : T.tm =
 and constr_case_check (g : T.env) ((_pt, et) : T.ty * T.ty)
     ((p, e) : A.pattern * A.tm) : T.pattern * T.tm =
   match p with
-  | A.PVar n              -> (T.PVar n, type_check g e et)
-  | A.PCase (A.IndCase _) -> raise NotImplemented
-  | A.PCase (A.EqCase _)  -> raise NotImplemented
+  | A.PVar n -> (T.PVar n, type_check g e et)
+  | A.PInd _ -> raise NotImplemented
+  | A.PEq _  -> raise NotImplemented
 
 and quotient_case_check (_g : T.env) ((_pt, _et) : T.ty * T.ty)
     ((p, _e) : A.pattern * A.tm) : T.pattern * T.tm =
@@ -163,6 +163,7 @@ and quotient_case_check (_g : T.env) ((_pt, _et) : T.ty * T.ty)
    * handle this pattern as a syntactic sugar of all left quotient patterns
    * after implementing a coverage checker
    *)
-  | A.PVar n              -> raise (QuotientPatternWithVar (Loc.map n (Option.value ~default:"_")))
-  | A.PCase (A.IndCase _) -> raise NotImplemented
-  | A.PCase (A.EqCase _)  -> raise NotImplemented
+  | A.PVar n ->
+      raise (QuotientPatternWithVar (Loc.map n (Option.value ~default:"_")))
+  | A.PInd _ -> raise NotImplemented
+  | A.PEq _  -> raise NotImplemented

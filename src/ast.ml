@@ -2,19 +2,15 @@
 
 open Lib
 
-type case =
-  | IndCase of {
+type pattern =
+  | PInd of {
       tm_ind_name : string;
       tm_constr : string location;
-      tm_args : pattern list;  (** similar to telescope, in reverse order *)
+      tm_args : string option list;  (** similar to telescope, in reverse order *)
     }
-  | EqCase  of pattern
-
-(** a pattern is nested, either a variable (matches all) or a pattern *)
-and pattern =
-  | PVar  of string option location
-      (** wildcard is None, otherwise it's Some *)
-  | PCase of case  (** nested pattern *)
+  | PEq  of string option location
+     (** wildcard is None, otherwise it's Some *)
+  | PVar of string option location
 
 type tm =
   | U        of int * loc  (** universe, with nat level *)

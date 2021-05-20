@@ -24,8 +24,8 @@ and branch = pattern * tm
 (** Match patterns *)
 and pattern =
   | PatVar of loc * identifier
-  | PatInd of loc * identifier * pattern list
-  | PatEq  of loc * pattern
+  | PatInd of loc * identifier * identifier list
+  | PatEq  of loc * identifier
 
 (** definition *)
 type fun_def = FunDef of loc * identifier * ty * tm

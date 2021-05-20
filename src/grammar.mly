@@ -72,13 +72,9 @@ let branch :=
   | ~ = pattern; SYM_ARROW; ~ = tm; SYM_SEMI; { (pattern, tm) }
 
 let pattern :=
-  | ctr = UPPER_IDENT; args = atomicPattern*; { Ext_ast.PatInd (loc_conv $loc, ctr, args) }
-  | KEY_REFL; ~ = atomicPattern;              { Ext_ast.PatEq (loc_conv $loc, atomicPattern) }
-  | ~ = atomicPattern;                        <>
-
-let atomicPattern :=
-  | id = LOWER_IDENT;                { Ext_ast.PatVar (loc_conv $loc, id) }
-  | SYM_LPAR; ~ = pattern; SYM_RPAR; <>
+  | ctr = UPPER_IDENT; args = LOWER_IDENT*; { Ext_ast.PatInd (loc_conv $loc, ctr, args) }
+  | KEY_REFL; id = LOWER_IDENT;             { Ext_ast.PatEq (loc_conv $loc, id) }
+  | id = LOWER_IDENT;                       { Ext_ast.PatVar (loc_conv $loc, id) }
 
 let tm1 :=
   | lhs = tm2; SYM_EQ; rhs = tm2; { Ext_ast.TmEq (loc_conv $loc, lhs, rhs) }

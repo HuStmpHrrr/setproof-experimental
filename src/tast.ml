@@ -4,16 +4,14 @@ open Lib
 
 module A = Ast
 
-type case =
-  | IndCase of {
+type pattern =
+  | PInd of {
       tm_ind_name : string;
       tm_constr   : string location;
-      tm_args     : pattern list;
+      tm_args     : string option list;
     }
-  | EqCase of pattern
-and pattern =
-  | PVar of (string option) location
-  | PCase of case
+  | PEq  of string option location
+  | PVar of string option location
 
 type tm =
   | U of int * loc
@@ -103,14 +101,11 @@ let rec tm_loc t : loc =
   | Subst (t, _)         -> tm_loc t
 
 (** count number of vars in a case pattern *)
-let rec case_vars c : int =
+let pattern_vars c : int =
   match c with
-  | IndCase ic -> List.sum (module Int) ic.tm_args ~f:pattern_vars
-  | EqCase p   -> pattern_vars p
-and pattern_vars p  : int =
-  match p with
-  | PVar _     -> 1
-  | PCase c    -> case_vars c
+  | PInd ic -> List.length ic.tm_args
+  | PEq _   -> 1
+  | PVar _  -> 1
 
 (** substitution operations *)
 module Subst = struct

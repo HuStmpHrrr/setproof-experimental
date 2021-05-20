@@ -82,22 +82,12 @@ and elab_pattern ((cctx, vctx) : ctx) : Ext.pattern -> var_ctx * Int.pattern =
         | Some (Second tid) -> tid
         | None              -> raise (UnknownConstrId (id, loc))
       in
-      let vctx, i_ps =
-        List.fold_map ~f:(fun vctx -> elab_pattern (cctx, vctx)) ~init:vctx e_ps
-      in
+      let i_ps = e_ps |> List.map ~f:(fun c -> Some c) |> List.rev in
       ( vctx,
-        Int.PCase
-          (Int.IndCase
-             {
-               tm_ind_name = tid;
-               tm_constr = Loc.put loc id;
-               tm_args = List.rev i_ps;
-             }
-          )
+        Int.PInd
+          { tm_ind_name = tid; tm_constr = Loc.put loc id; tm_args = i_ps }
       )
-  | Ext.PatEq (_, e_p)         ->
-      let vctx, i_p = elab_pattern (cctx, vctx) e_p in
-      (vctx, Int.PCase (Int.EqCase i_p))
+  | Ext.PatEq (loc, id)        -> (vctx, Int.PEq (Loc.put loc (Some id)))
 
 let elab_fun_def ((cctx, vctx) : ctx) : Ext.fun_def -> var_ctx * Int.fun_def =
  fun (Ext.FunDef (loc, id, e_tau, e_t)) ->
