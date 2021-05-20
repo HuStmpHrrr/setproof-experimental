@@ -163,7 +163,9 @@ let elab_qit_def ((cctx, vctx) : ctx) :
     |> Tuple2.map2 ~f:(Map.of_alist_exn (module String))
   in
   let cctx, qit_quot =
-    List.fold_map ~f:(folder_with elab_quotient) ~init:cctx e_quot.quot_constrs
+    List.fold_map
+      ~f:(folder_with elab_quotient)
+      ~init:cctx e_quot.quot_quotients
     |> Tuple2.map2 ~f:(Map.of_alist_exn (module String))
   in
   ( (cctx, vctx_add_global vctx e_quot.quot_id),
