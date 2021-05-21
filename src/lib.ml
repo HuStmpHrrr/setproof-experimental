@@ -1,5 +1,15 @@
 include Base
-module StrM = Map.M (String)
+module StrM = struct
+  include Map.M (String)
+
+  let pp pp_data fmt (m : 'a t) =
+    let pp_entry ~key ~data =
+      Caml.Format.fprintf fmt "%s -> %a;@ " key pp_data data
+    in
+    Caml.Format.fprintf fmt "@[<hov2>Map [@,";
+    Map.iteri m ~f:pp_entry;
+    Caml.Format.fprintf fmt "@]@,]"
+end
 
 exception Impossible
 exception NotImplemented
@@ -20,7 +30,7 @@ type 'a real_location = {
 [@@deriving show { with_path = false }]
 
 let real_pp_real_loc ?(with_file = true) fmt l =
-  Caml.Format.fprintf fmt "<loc: %d,%d:%d,%d" l.start_l l.start_c l.end_l
+  Caml.Format.fprintf fmt "<loc:%d,%d - %d,%d" l.start_l l.start_c l.end_l
     l.end_c;
   if with_file
   then Caml.Format.fprintf fmt " in %s" l.file;
@@ -35,7 +45,7 @@ type loc = unit location [@@deriving show { with_path = false }]
 
 let real_pp_loc fmt = function
   | RealLoc l   -> real_pp_real_loc fmt l
-  | GhostLoc () -> Caml.Format.fprintf fmt "<loc: booo>"
+  | GhostLoc () -> Caml.Format.fprintf fmt "<loc:booo>"
 
 let loc_dummy : loc = GhostLoc ()
 

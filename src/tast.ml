@@ -12,6 +12,7 @@ type pattern =
     }
   | PEq  of string option location
   | PVar of string option location
+[@@deriving show { with_path = false }]
 
 type tm =
   | U of int * loc
@@ -31,7 +32,9 @@ type tm =
   | Case     of ty * tm * (pattern * tm) list * (pattern * tm) list * loc
   | Refl     of tm * loc  (* location for the refl header *)
   | Subst    of tm * subst
+[@@deriving show { with_path = false }]
 and ty = tm
+[@@deriving show { with_path = false }]
 and subst =
   (**
    *       |D| = i
@@ -46,8 +49,10 @@ and subst =
    *    G, D' |- Cons (s, t, i) : D, S
    *)
   | Cons of subst * tm * int
+[@@deriving show { with_path = false }]
 
 type telescope = ty list
+[@@deriving show { with_path = false }]
 
 type qit_def = {
     qit_name    : string location;
@@ -57,6 +62,7 @@ type qit_def = {
     qit_constr  : (telescope * tm list) StrM.t;
     qit_quot    : quotient StrM.t
   }
+[@@deriving show { with_path = false }]
 and quotient = {
     qit_args : telescope;
     qit_lty  : ty;
@@ -64,6 +70,7 @@ and quotient = {
     qit_lhs  : tm;
     qit_rhs  : tm;
   }
+[@@deriving show { with_path = false }]
 
 (* various kinds of global definitions *)
 type globdef =

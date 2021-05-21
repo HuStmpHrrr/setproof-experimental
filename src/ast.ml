@@ -11,6 +11,7 @@ type pattern =
     }
   | PEq  of string option location  (** wildcard is None, otherwise it's Some *)
   | PVar of string option location
+[@@deriving show { with_path = false }]
 
 type tm =
   | U        of int * loc  (** universe, with nat level *)
@@ -43,17 +44,21 @@ type tm =
   | Case     of tm * (pattern * tm) list * (pattern * tm) list * loc
       (** scrutinee, patterns for constructors, and patterns for quotients. *)
   | Refl     of tm * loc  (** location for the refl header *)
+[@@deriving show { with_path = false }]
 
 and ty = tm
+[@@deriving show { with_path = false }]
 
 type fun_def = {
   fun_name : string location;
   fun_type : ty;
   fun_body : tm;
 }
+[@@deriving show { with_path = false }]
 
 (** a telescope is a reverse context, which is good for unification *)
 type telescope = ty list
+[@@deriving show { with_path = false }]
 
 type qit_def = {
   qit_name : string location;  (** definition name and location *)
@@ -65,18 +70,22 @@ type qit_def = {
       (** a telescope for the argument + a list of terms to apply to the inductive type *)
   qit_quot : quotient StrM.t;
 }
+[@@deriving show { with_path = false }]
 
 and quotient = {
   qit_args : telescope;
   qit_lhs : tm;
   qit_rhs : tm;
 }
+[@@deriving show { with_path = false }]
 
 type def =
   | Fun of fun_def
   | Qit of qit_def
+[@@deriving show { with_path = false }]
 
 type module_def = def list
+[@@deriving show { with_path = false }]
 
 (** location info for a term *)
 let rec tm_loc t : loc =
