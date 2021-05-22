@@ -95,7 +95,7 @@ let gen_block_comment op cl =
 
 let parse_test p str s =
   match parse_string p str s with
-  | Success a -> Either.First a
+  | Success a     -> Either.First a
   | Failed (m, _) ->
-     Caml.print_string m;
-     Either.Second ()
+      Caml.print_string m;
+      Either.Second ()

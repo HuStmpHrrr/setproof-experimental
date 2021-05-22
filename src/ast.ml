@@ -46,8 +46,7 @@ type tm =
   | Refl     of tm * loc  (** location for the refl header *)
 [@@deriving show { with_path = false }]
 
-and ty = tm
-[@@deriving show { with_path = false }]
+and ty = tm [@@deriving show { with_path = false }]
 
 type fun_def = {
   fun_name : string location;
@@ -57,8 +56,7 @@ type fun_def = {
 [@@deriving show { with_path = false }]
 
 (** a telescope is a reverse context, which is good for unification *)
-type telescope = ty list
-[@@deriving show { with_path = false }]
+type telescope = ty list [@@deriving show { with_path = false }]
 
 type qit_def = {
   qit_name : string location;  (** definition name and location *)
@@ -84,8 +82,7 @@ type def =
   | Qit of qit_def
 [@@deriving show { with_path = false }]
 
-type module_def = def list
-[@@deriving show { with_path = false }]
+type module_def = def list [@@deriving show { with_path = false }]
 
 (** location info for a term *)
 let rec tm_loc t : loc =

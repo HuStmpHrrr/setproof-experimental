@@ -166,4 +166,4 @@ and quotient_case_check (_g : T.env) ((_pt, _et) : T.ty * T.ty)
   | A.PVar n ->
       raise (QuotientPatternWithVar (Loc.map n (Option.value ~default:"_")))
   | A.PInd _ -> raise NotImplemented
-  | A.PEq _  -> raise NotImplemented
+  | A.PEq _ -> raise NotImplemented
