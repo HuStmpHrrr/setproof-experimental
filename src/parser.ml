@@ -1,6 +1,6 @@
 open Lib
 
-module P = ParserWrapper
+module P = MParser_wrapper
 module E = Ext_ast
 open P
 

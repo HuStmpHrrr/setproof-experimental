@@ -1,4 +1,4 @@
-open Lib
+open Base
 
 (** JaneStreet's Base wrapper *)
 module Base = struct
@@ -97,5 +97,5 @@ let parse_test p str s =
   match parse_string p str s with
   | Success a -> Either.First a
   | Failed (m, _) ->
-     Stdio.print_string m;
+     Caml.print_string m;
      Either.Second ()
