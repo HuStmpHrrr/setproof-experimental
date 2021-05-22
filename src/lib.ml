@@ -30,7 +30,7 @@ type 'a real_location = {
 [@@deriving show { with_path = false }]
 
 let real_pp_real_loc ?(with_file = true) fmt l =
-  Caml.Format.fprintf fmt "<loc:%d,%d - %d,%d" l.start_l l.start_c l.end_l
+  Caml.Format.fprintf fmt "<loc %d:%d-%d:%d" l.start_l l.start_c l.end_l
     l.end_c;
   if with_file then Caml.Format.fprintf fmt " in %s" l.file;
   Caml.Format.pp_print_string fmt ">"
@@ -42,8 +42,8 @@ type 'a location =
 
 type loc = unit location [@@deriving show { with_path = false }]
 
-let real_pp_loc fmt = function
-  | RealLoc l   -> real_pp_real_loc fmt l
+let real_pp_loc ?(with_file = true) fmt = function
+  | RealLoc l   -> real_pp_real_loc ~with_file fmt l
   | GhostLoc () -> Caml.Format.fprintf fmt "<loc:booo>"
 
 let loc_dummy : loc = GhostLoc ()

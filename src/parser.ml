@@ -17,8 +17,7 @@ let line_comment = gen_line_comment "--"
 
 let lex_spaces =
   String.concat
-  <$> many (block_comment <|> line_comment <|> many1_chars space)
-  <?> "whitespaces"
+  <$> hidden (many (block_comment <|> line_comment <|> many1_chars space))
 
 let lex p = p << lex_spaces
 let lexchar c = lex (char c)
@@ -34,12 +33,13 @@ let with_loc p =
 let open_pair p = lex (with_loc p)
 let close_pair open_name close_name loc p =
   lex p
-  <?> Caml.Format.asprintf "%s matching with %s at %a" close_name open_name
-        real_pp_loc loc
+  <?> Caml.Format.asprintf "%s for %s at %a" close_name open_name
+        (real_pp_loc ~with_file:false)
+        loc
 
 let open_paren = open_pair (char '(')
 let close_paren loc =
-  close_pair "opening parenthesis" "closing parenthesis" loc (char ')')
+  close_pair "opening parenthesis '('" "closing parenthesis ')'" loc (char ')')
 
 let id_following_chars = char '_' <|> alphanum
 
@@ -49,8 +49,11 @@ let keyword, lower_identifier, capital_identifier =
     if List.mem ~equal:String.equal !keywords id
     then raise (DuplicatedKeyword id);
     keywords := id :: !keywords;
-    let* _ = string id in
-    not_followed_by id_following_chars "Non-keyword"
+    let p =
+      let* _ = string id in
+      not_followed_by id_following_chars "Non-keyword"
+    in
+    p <??> "keyword \"" ^ id ^ "\""
   in
   let identifier_helper start =
     let helper =
@@ -110,9 +113,11 @@ let branch body_tm =
 
 let lam_tm arg_ty body_tm =
   let* l1, _ = lex (with_loc key_lam)
-  and* l, _ = open_paren in
-  let+ arg = lex lower_identifier <?> "name of argument of lambda"
-  and+ arg_ty = lexchar ':' >> arg_ty <??> "type of argument of lambda"
+  and* l, _ =
+    open_paren <?> "opening parenthesis '(' for argument of lambda term"
+  in
+  let+ arg = lex lower_identifier <?> "name of argument of lambda term"
+  and+ arg_ty = lexchar ':' >> arg_ty <??> "type of argument of lambda term"
   and+ _ = close_paren l
   and+ _ = lexchar ','
   and+ body_tm = body_tm <??> "body of lambda" in
@@ -120,12 +125,14 @@ let lam_tm arg_ty body_tm =
 
 let pi_tm idx_ty idxed_ty =
   let* l1, _ = lex (with_loc key_pi)
-  and* l, _ = open_paren in
-  let+ idx = lex lower_identifier <?> "name of argument of pi"
-  and+ idx_ty = lexchar ':' >> idx_ty <??> "type of argument of pi"
+  and* l, _ =
+    open_paren <?> "opening parenthesis '(' for argument of pi term"
+  in
+  let+ idx = lex lower_identifier <?> "name of argument of pi term"
+  and+ idx_ty = lexchar ':' >> idx_ty <??> "type of argument of pi term"
   and+ _ = close_paren l
   and+ _ = lexstring "->"
-  and+ idxed_ty = idxed_ty <??> "codomain of pi" in
+  and+ idxed_ty = idxed_ty <??> "codomain of pi term" in
   E.TmPi (loc_combine l1 (E.tm_loc idxed_ty), idx, idx_ty, idxed_ty)
 
 let arrow_tm idx_ty idxed_ty =
@@ -145,7 +152,8 @@ let match_tm scr_tm br_tm =
   let snd_tm_loc (_, t) = E.tm_loc t in
   let* l1, _ = open_pair key_match in
   let+ scr = scr_tm <??> "scrutinee of match"
-  and+ l2, _ = close_pair "match" "with" l1 (with_loc key_with)
+  and+ l2, _ =
+    close_pair "keyword \"match\"" "keyword \"with\"" l1 (with_loc key_with)
   and+ cs = many (branch br_tm) <??> "constructor branches of match"
   and+ ol3, eqs = opt (None, []) (quotient_branches br_tm) in
   match Option.(first_some ol3 (map ~f:snd_tm_loc (List.last cs))) with
@@ -154,7 +162,7 @@ let match_tm scr_tm br_tm =
 
 let eq_tm hs_tm =
   let+ lhs_tm = attempt (hs_tm << lexstring "=")
-  and+ rhs_tm = hs_tm in
+  and+ rhs_tm = hs_tm <??> "right hand side of \'=\'" in
   E.TmEq (loc_combine (E.tm_loc lhs_tm) (E.tm_loc rhs_tm), lhs_tm, rhs_tm)
 
 let refl_tm arg_tm =
@@ -163,13 +171,15 @@ let refl_tm arg_tm =
   E.TmRefl (loc_combine l1 (E.tm_loc arg_tm), arg_tm)
 
 let univ_with_level_tm =
-  let+ l1, _ = lex (with_loc key_Univ)
-  and+ l2, lv = lex (with_loc integer) in
-  E.TmUniv (loc_combine l1 l2, lv)
+  debug 3 "univ_with_level_tm" E.pp_tm
+    (let+ l1, _ = lex (with_loc key_Univ)
+     and+ l2, lv = lex (with_loc integer) in
+     E.TmUniv (loc_combine l1 l2, lv))
 
 let univ_no_level_tm =
-  let+ l1, _ = lex (with_loc key_Univ) in
-  E.TmUniv (l1, 0)
+  debug 3 "univ_no_level_tm" E.pp_tm
+    (let+ l1, _ = lex (with_loc key_Univ) in
+     E.TmUniv (l1, 0))
 
 let constr_tm =
   debug 3 "constr_tm" E.pp_tm
@@ -198,7 +208,7 @@ let app_stack atomic_tm =
 let tm =
   recur (fun tm ->
       let parened_tm =
-        let* l, _ = open_paren in
+        let* l, _ = hidden open_paren in
         let+ tm = tm
         and+ _ = close_paren l in
         tm
@@ -225,21 +235,30 @@ let fun_def =
   and+ _ = lexstring ":="
   and+ fbody = tm <??> "body of function"
   and+ l2, _ =
-    close_pair ("function \"" ^ fid ^ "\"") "';'" l1 (with_loc (char ';'))
+    close_pair
+      ("function \"" ^ fid ^ "\"")
+      "separator ';'" l1
+      (with_loc (char ';'))
   in
   E.FunDef (loc_combine l1 l2, fid, fty, fbody)
 
-let quot_ind_entry =
+let quot_ind_entry category =
   let* l1, eid = open_pair capital_identifier in
-  let+ ety = lexchar ':' >> tm <??> "type of quotient"
+  let+ ety = lexchar ':' >> tm <??> "type of " ^ category
   and+ l2, _ =
-    close_pair ("quotient \"" ^ eid ^ "\"") "';'" l1 (with_loc (char ';'))
+    close_pair
+      (category ^ " \"" ^ eid ^ "\"")
+      "separator ';'" l1
+      (with_loc (char ';'))
   in
   E.QuotIndEntryDef (loc_combine l1 l2, eid, ety)
 
 let quot_ind_def =
   let quot_ind_idx =
-    let* l, _ = open_paren in
+    let* l, _ =
+      open_paren
+      <?> "opening parenthesis '(' for index of quotient inductive type"
+    in
     let+ idx = lex lower_identifier
     and+ idx_ty = lexchar ':' >> tm <??> "type of index"
     and+ _ = close_paren l in
@@ -249,14 +268,14 @@ let quot_ind_def =
   let+ quot_id = lex lower_identifier
   and+ quot_indices = many quot_ind_idx
   and+ quot_kind = lexchar ':' >> tm <??> "kind of quotient inductive type"
-  and+ _ = close_pair "\"data\"" "\"where\"" l1 key_where
-  and+ quot_constrs =
-    many quot_ind_entry <??> "constructors of quotient inductive type"
+  and+ _ = close_pair "keyword \"data\"" "keyword \"where\"" l1 key_where
+  and+ quot_constrs = many (quot_ind_entry "constructor")
   and+ quot_quotients =
-    opt []
-      (let* _ = lex key_quotient in
-       many quot_ind_entry <??> "quotients of quotient inductive type")
-  and+ l2, _ = close_pair "\"data\"" "';'" l1 (with_loc (lexchar ';')) in
+    opt [] (lex key_quotient >> many (quot_ind_entry "quotient"))
+  and+ l2, _ =
+    close_pair "quotient inductive type" "separator ';'" l1
+      (with_loc (lexchar ';'))
+  in
   let quot_loc = loc_combine l1 l2 in
   E.QuotIndDef
     { quot_loc; quot_id; quot_indices; quot_kind; quot_constrs; quot_quotients }
@@ -267,9 +286,9 @@ let top_stmt =
 
 let mod_def =
   debug 1 "module" E.pp_module_def
-    (let* _ = debug 0 "module" Caml.Format.pp_print_string lex_spaces in
+    (let* _ = lex_spaces in
      let+ stmts = many top_stmt
-     and+ _ = eof <?> "end of file" in
+     and+ _ = eof in
      E.ModDef stmts)
 
 let parse_file file =

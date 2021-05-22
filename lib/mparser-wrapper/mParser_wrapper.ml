@@ -56,7 +56,7 @@ let ( and+ ) = ( and* )
 
 (** More operators *)
 
-let ( <$> ) f m = ( let+ ) m f
+let ( <$> ) f m = map m ~f
 
 (** More functions *)
 
@@ -68,6 +68,12 @@ let recur f =
 let delay f =
   let p s = (Lazy.force f) s in
   p
+
+let hidden p s =
+  let reply = p s in
+  if is_consumed reply && is_error reply
+  then reply
+  else set_error reply No_error
 
 let gen_nonzero () : (char, 's) t =
   satisfy (fun c -> Char.(c <> '0') && Char.is_digit c)
@@ -83,7 +89,7 @@ let gen_integer () : (int, 's) t =
 
 let gen_line_comment s : (string, 's) t =
   let* _ = string s in
-  many_chars any_char
+  many_chars_until any_char newline
 
 let gen_block_comment op cl =
   let start = string op in

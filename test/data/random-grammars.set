@@ -6,10 +6,10 @@ x : y := z;
 
 y : z := k;
 
-a : b := lam x : t, x;
-a0 : b := lam x : pi(t : a) -> t, x;
+a : b := lam (x : t), x;
+a0 : b := lam (x : pi(t : a) -> t), x;
 
-c : d := lam x : t,
+c : d := lam (x : t),
   match x with
     Base -> a;
   quotient
@@ -24,7 +24,7 @@ quotient
   Loop : Base = Base;
 ;
 
-m : pi(y : foo) -> indexed y -> foo := lam y : foo, lam x : indexed y,
+m : pi(y : foo) -> indexed y -> foo := lam (y : foo), lam (x : indexed y),
   match x with
     Bar -> (
       match y with
@@ -48,7 +48,7 @@ m : pi(y : foo) -> indexed y -> foo := lam y : foo, lam x : indexed y,
 --      ^
 --      Maybe this syntax for match?
 
-n : pi(y : foo) -> indexed2 y -> indexed3 y := lam y : foo, lam x : indexed2 y,
+n : pi(y : foo) -> indexed2 y -> indexed3 y := lam (y : foo), lam x : indexed2 y,
   match x with
     Bar2 -> Bar3;
     Buz2 -> Buz3;
