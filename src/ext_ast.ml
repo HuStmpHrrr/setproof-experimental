@@ -59,3 +59,19 @@ type top_statement =
 (** Module definition *)
 type module_def = ModDef of top_statement list
 [@@deriving show { with_path = false }]
+
+let tm_loc = function
+  | TmUniv (l, _)        -> l
+  | TmConstr (l, _)      -> l
+  | TmVar (l, _)         -> l
+  | TmLam (l, _, _, _)   -> l
+  | TmPi (l, _, _, _)    -> l
+  | TmMatch (l, _, _, _) -> l
+  | TmApp (l, _, _)      -> l
+  | TmEq (l, _, _)       -> l
+  | TmRefl (l, _)        -> l
+
+let pattern_loc = function
+  | PatVar (l, _)    -> l
+  | PatInd (l, _, _) -> l
+  | PatEq (l, _)     -> l

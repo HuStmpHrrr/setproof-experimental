@@ -83,22 +83,6 @@ let key_with = keyword "with"
 let key_Refl = keyword "Refl"
 let key_Univ = keyword "Univ"
 
-let tm_loc = function
-  | E.TmUniv (l, _)        -> l
-  | E.TmConstr (l, _)      -> l
-  | E.TmVar (l, _)         -> l
-  | E.TmLam (l, _, _, _)   -> l
-  | E.TmPi (l, _, _, _)    -> l
-  | E.TmMatch (l, _, _, _) -> l
-  | E.TmApp (l, _, _)      -> l
-  | E.TmEq (l, _, _)       -> l
-  | E.TmRefl (l, _)        -> l
-
-let loc_of_pattern = function
-  | E.PatVar (l, _)    -> l
-  | E.PatInd (l, _, _) -> l
-  | E.PatEq (l, _)     -> l
-
 let refl_pattern =
   let+ l1, _ = lex (with_loc key_Refl)
   and+ l2, arg = lex (with_loc lower_identifier) in
@@ -132,7 +116,7 @@ let lam_tm arg_ty body_tm =
   and+ _ = close_paren l
   and+ _ = lexchar ','
   and+ body_tm = body_tm <??> "body of lambda" in
-  E.TmLam (loc_combine l1 (tm_loc body_tm), arg, arg_ty, body_tm)
+  E.TmLam (loc_combine l1 (E.tm_loc body_tm), arg, arg_ty, body_tm)
 
 let pi_tm idx_ty idxed_ty =
   let* l1, _ = lex (with_loc key_pi)
@@ -142,22 +126,23 @@ let pi_tm idx_ty idxed_ty =
   and+ _ = close_paren l
   and+ _ = lexstring "->"
   and+ idxed_ty = idxed_ty <??> "codomain of pi" in
-  E.TmPi (loc_combine l1 (tm_loc idxed_ty), idx, idx_ty, idxed_ty)
+  E.TmPi (loc_combine l1 (E.tm_loc idxed_ty), idx, idx_ty, idxed_ty)
 
 let arrow_tm idx_ty idxed_ty =
   let+ idx_ty = attempt (idx_ty << lexstring "->")
   and+ idxed_ty = idxed_ty in
-  E.TmPi (loc_combine (tm_loc idx_ty) (tm_loc idxed_ty), "_", idx_ty, idxed_ty)
+  E.TmPi
+    (loc_combine (E.tm_loc idx_ty) (E.tm_loc idxed_ty), "_", idx_ty, idxed_ty)
 
 let quotient_branches br_tm =
   let+ l1, _ = lex (with_loc key_quotient)
   and+ eqs = many (branch br_tm) <??> "quotient branches of match" in
   match List.last eqs with
   | None        -> (Some l1, eqs)
-  | Some (_, t) -> (Some (tm_loc t), eqs)
+  | Some (_, t) -> (Some (E.tm_loc t), eqs)
 
 let match_tm scr_tm br_tm =
-  let snd_tm_loc (_, t) = tm_loc t in
+  let snd_tm_loc (_, t) = E.tm_loc t in
   let* l1, _ = open_pair key_match in
   let+ scr = scr_tm <??> "scrutinee of match"
   and+ l2, _ = close_pair "match" "with" l1 (with_loc key_with)
@@ -170,12 +155,12 @@ let match_tm scr_tm br_tm =
 let eq_tm hs_tm =
   let+ lhs_tm = attempt (hs_tm << lexstring "=")
   and+ rhs_tm = hs_tm in
-  E.TmEq (loc_combine (tm_loc lhs_tm) (tm_loc rhs_tm), lhs_tm, rhs_tm)
+  E.TmEq (loc_combine (E.tm_loc lhs_tm) (E.tm_loc rhs_tm), lhs_tm, rhs_tm)
 
 let refl_tm arg_tm =
   let+ l1, _ = lex (with_loc key_Refl)
   and+ arg_tm = arg_tm <??> "argument of Refl" in
-  E.TmRefl (loc_combine l1 (tm_loc arg_tm), arg_tm)
+  E.TmRefl (loc_combine l1 (E.tm_loc arg_tm), arg_tm)
 
 let univ_with_level_tm =
   let+ l1, _ = lex (with_loc key_Univ)
@@ -198,7 +183,7 @@ let var_tm =
 
 let app_stack atomic_tm =
   let app_folder fun_tm arg_tm =
-    E.TmApp (loc_combine (tm_loc fun_tm) (tm_loc arg_tm), fun_tm, arg_tm)
+    E.TmApp (loc_combine (E.tm_loc fun_tm) (E.tm_loc arg_tm), fun_tm, arg_tm)
   in
   let* atomic_tms =
     debug 4 "many atomic_tm"
