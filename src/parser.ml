@@ -17,7 +17,7 @@ let line_comment = gen_line_comment "--"
 
 let lex_spaces =
   String.concat
-  <$> hidden (many (block_comment <|> line_comment <|> many1_chars space))
+  <$> hidden (many (choice [ block_comment; line_comment; many1_chars space ]))
 
 let lex p = p << lex_spaces
 let lexchar c = lex (char c)
@@ -102,7 +102,7 @@ let var_pattern =
   let+ l1, arg = lex (with_loc lower_identifier) in
   E.PatVar (l1, arg)
 
-let pattern = refl_pattern <|> constr_pattern <|> var_pattern
+let pattern = choice [ refl_pattern; constr_pattern; var_pattern ]
 
 let branch body_tm =
   let+ pat = pattern <??> "pattern"
@@ -215,18 +215,21 @@ let tm =
       in
       let atomic_tm =
         debug 2 "atomic_tm" E.pp_tm
-          (univ_no_level_tm <|> constr_tm <|> var_tm <|> parened_tm)
+          (choice [ univ_no_level_tm; constr_tm; var_tm; parened_tm ])
       in
       let application_tm =
         debug 2 "application_tm" E.pp_tm
-          (univ_with_level_tm <|> refl_tm atomic_tm <|> app_stack atomic_tm)
+          (choice [ univ_with_level_tm; refl_tm atomic_tm; app_stack atomic_tm ])
       in
       let equality_tm = eq_tm application_tm <|> application_tm in
-      lam_tm tm tm
-      <|> pi_tm tm tm
-      <|> match_tm tm tm
-      <|> arrow_tm equality_tm tm
-      <|> equality_tm
+      choice
+        [
+          lam_tm tm tm;
+          pi_tm tm tm;
+          match_tm tm tm;
+          arrow_tm equality_tm tm;
+          equality_tm;
+        ]
   )
 
 let fun_def =

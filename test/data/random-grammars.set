@@ -48,7 +48,7 @@ m : pi(y : foo) -> indexed y -> foo := lam (y : foo), lam (x : indexed y),
 --      ^
 --      Maybe this syntax for match?
 
-n : pi(y : foo) -> indexed2 y -> indexed3 y := lam (y : foo), lam x : indexed2 y,
+n : pi(y : foo) -> indexed2 y -> indexed3 y := lam (y : foo), lam (x : indexed2 y),
   match x with
     Bar2 -> Bar3;
     Buz2 -> Buz3;
@@ -102,3 +102,4 @@ quotient
   SuccPred : Succ (Pred n) = n;
   PredSucc : Pred (Succ n) = n;
 ;
+--

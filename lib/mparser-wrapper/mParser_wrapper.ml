@@ -80,16 +80,21 @@ let gen_nonzero () : (char, 's) t =
 
 let gen_integer () : (int, 's) t =
   let nonzero = gen_nonzero () in
-  Int.of_string
-  <$> (string "0"
-      <|> (String.of_char_list
-          <$> ((fun a b -> a :: b) <$> nonzero <*> many digit)
-          )
-      )
+  let zero =
+    let+ _ = string "0"
+    and+ _ = not_followed_by digit "non-canonical integer starting with '0'" in
+    0
+  in
+  let pos_int =
+    let+ c = nonzero
+    and+ cs = many digit in
+    Int.of_string (String.of_char_list (c :: cs))
+  in
+  zero <|> pos_int
 
 let gen_line_comment s : (string, 's) t =
   let* _ = string s in
-  many_chars_until any_char newline
+  many_chars_until any_char (newline <|> (eof >>$ ' '))
 
 let gen_block_comment op cl =
   let start = string op in
@@ -97,7 +102,9 @@ let gen_block_comment op cl =
   let nonp =
     many1_chars (not_followed_by (start <|> end_) "" >> any_char_or_nl)
   in
-  recur (fun p -> between start end_ (map ~f:String.concat (many (p <|> nonp))))
+  recur (fun p ->
+      between start end_ (map ~f:String.concat (hidden (many (p <|> nonp))))
+  )
 
 let parse_test p str s =
   match parse_string p str s with
