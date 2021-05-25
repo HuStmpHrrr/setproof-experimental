@@ -70,20 +70,23 @@ module PhoneElim where
       substM : ∀ {x y} (eq : x ≡ y) (ph : Phone x) → M ph → M (subst Phone eq ph)
       substM {x} eq ph Mph = J {x = x} (JM ph) (JMRefl ph Mph) eq
 
-      substMRefl : ∀ {x} (ph : Phone x) (Mph : M ph) → PathP (λ i → M (substRefl {B = Phone} ph i)) (substM refl ph Mph) Mph
-      substMRefl {x} ph Mph = subst (λ t → PathP (λ i → M (substRefl {B = Phone} ph i)) t Mph) (sym eq) path
+      Mpath : ∀ {x} → Phone x → I → Set ℓ
+      Mpath ph i = M (substRefl {B = Phone} ph i)
+
+      substMRefl : ∀ {x} (ph : Phone x) (Mph : M ph) → PathP (Mpath ph) (substM refl ph Mph) Mph
+      substMRefl {x} ph Mph = subst (λ t → PathP (Mpath ph) t Mph) (sym eq) path
         where eq : substM refl ph Mph ≡ JMRefl ph Mph
               eq = JRefl (JM ph) (JMRefl ph Mph)
               path : PathP (λ i → M (substRefl {B = Phone} ph i)) (JMRefl ph Mph) Mph
               path i = subst-filler M (sym (substRefl {B = Phone} ph)) Mph (~ i)
 
-      elim-subst-refl : ∀ {x} (ph : Phone x) → PathP (λ i → M (substRefl {B = Phone} ph i)) (elim (subst Phone refl ph)) (elim ph)
+      elim-subst-refl : ∀ {x} (ph : Phone x) → PathP (Mpath ph) (elim (subst Phone refl ph)) (elim ph)
       elim-subst-refl ph i = elim (substRefl {B = Phone} ph i)
 
     subst-elim-invar : ∀ {x y} (eq : x ≡ y) (ph : Phone x) → elim (subst Phone eq ph) ≡ substM eq ph (elim ph)
     subst-elim-invar {x} eq ph = J {x = x}
                                    (λ y eq → elim (subst Phone eq ph) ≡ substM eq ph (elim ph))
-                                   (λ i → comp (λ j → M (substRefl {B = Phone} ph (~ j)))
+                                   (λ i → comp (λ j → Mpath ph (~ j))
                                                (λ j → λ { (i = i0) → elim-subst-refl ph (~ j)
                                                         ; (i = i1) → substMRefl ph (elim ph) (~ j) })
                                                (elim ph))
