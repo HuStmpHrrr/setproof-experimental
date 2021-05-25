@@ -124,8 +124,8 @@ B′s-Phone≠0 P = snotz (refl ∙ P SS)
 B′s-Phone≠1 : ¬ ((ph : Phone B) → price ph ≡ 1)
 B′s-Phone≠1 P = snotz (sym (P (subst Phone Eq IP)) ∙ IP-is-0)
 
-W′s-Phone≠0 : ¬ ((ph : Phone B) → price ph ≡ 1)
-W′s-Phone≠0 P = snotz (sym (P (subst Phone Eq IP)) ∙ IP-is-0)
+W′s-Phone≠0 : ¬ ((ph : Phone W) → price ph ≡ 0)
+W′s-Phone≠0 P = snotz (sym SS-is-1 ∙ P (subst Phone (sym Eq) SS))
 
 W′s-Phone≠1 : ¬ ((ph : Phone W) → price ph ≡ 1)
 W′s-Phone≠1 P = snotz (sym (refl ∙ P IP))
