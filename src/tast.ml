@@ -18,7 +18,7 @@ type tm =
   | U of int * loc
   | Glob of string location
   | Var of int * (string option) location
-  | Pi of ty * ty         (* carry the universe level it lives in *)
+  | Pi of ty * ty
   | Eq of {
       tm_lty   : ty;
       tm_rty   : ty;
@@ -340,7 +340,6 @@ module TmOps = struct
   let is_quotiented (d : qit_def) : bool =
     not (Map.is_empty d.qit_quot)
 
-
   let qit_ty qd : ty =
     telescope_to_pi qd.qit_index (telescope_to_pi qd.qit_indexed (U (qd.qit_ret_lv, loc_dummy)))
 
@@ -364,13 +363,33 @@ module TmOps = struct
                                            })
     end
 
-  let globdef_ty_gen g gd : ty =
+  let globdef_ty g gd : ty =
     match gd with
     | DInd qd           -> qit_ty qd
     | DConstr (qn, n)   -> get_constr_ty g qn n
     | DEqConstr (qn, n) -> get_eqconstr_ty g qn n
     | DDecl t           -> t
     | DDef (t, _)       -> t
+
+  let rec occur_free x t : bool =
+    match push_subst t with
+    | U (_, _)
+      | Glob _                -> false
+    | Var (y, _)              -> Int.(x = y)
+    | Pi (a, b)               -> occur_free x a || occur_free (x + 1) b
+    | Eq eq                   -> occur_free x eq.tm_lty
+                                 || occur_free x eq.tm_rty
+                                 || occur_free x eq.tm_ltm
+                                 || occur_free x eq.tm_rtm
+    | Lam (a, t, _)           -> occur_free x a || occur_free (x + 1) t
+    | App (t, s)              -> occur_free x t || occur_free x s
+    | Constr (_, _)
+      | EqConstr (_, _)       -> false
+    | Case (rt, t, cs, qs, _) -> occur_free x rt || occur_free x t
+                                 || List.exists cs ~f:(fun (p, t) -> occur_free (x + pattern_vars p) t)
+                                 || List.exists qs ~f:(fun (p, t) -> occur_free (x + pattern_vars p) t)
+    | Refl (t, _)             -> occur_free x t
+    | Subst (_, _)            -> raise Impossible (* pushed substitution inwards already *)
 
 end
 
