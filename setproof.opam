@@ -11,12 +11,13 @@ depends: [
   "dune"
   "mparser"
   "ocaml" {>= "4.08"}
+  "ounit2" {with-test}
   "ppxlib"
   "ppx_deriving"
   "stdio"
 ]
 build: [
   ["dune" "subst"] {pinned}
-  ["dune" "build" "-p" name "-j" jobs]
+  ["dune" "build" "-p" name "-j" jobs "@install" "@runtest" {with-test}]
 ]
 dev-repo: "git+https://github.com/HuStmpHrrr/setproof-experimental.git"

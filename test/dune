@@ -1,0 +1,10 @@
+(dirs :standard data)
+(data_only_dirs data)
+
+(test
+ (name main)
+ (libraries base dune-build-info ounit2 setproof)
+ (modules main)
+ (action
+  (run %{test}))
+ (deps (glob_files data/*) (glob_files data/**/*)))
