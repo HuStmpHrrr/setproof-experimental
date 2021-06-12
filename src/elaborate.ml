@@ -23,6 +23,8 @@ let vctx_add_local vctx id =
   Map.add_multi (vctx_shiftn 1 vctx) ~key:id ~data:(Some 0)
 let vctx_add_global vctx id = Map.add_exn vctx ~key:id ~data:[ None ]
 
+let make_eliminator_name id = "elim_" ^ id
+
 let rec elab_tm ((cctx, vctx) : ctx) : Ext.tm -> Int.tm = function
   | Ext.TmUniv (loc, lev) -> Int.U (lev, loc)
   | Ext.TmConstr (loc, id) -> (
@@ -168,7 +170,9 @@ let elab_qit_def ((cctx, vctx) : ctx) :
       ~init:cctx e_quot.quot_quotients
     |> Tuple2.map2 ~f:(Map.of_alist_exn (module String))
   in
-  ( (cctx, vctx_add_global vctx e_quot.quot_id),
+  let vctx = vctx_add_global vctx e_quot.quot_id in
+  let vctx = vctx_add_global vctx (make_eliminator_name e_quot.quot_id) in
+  ( (cctx, vctx),
     Int.{ qit_name; qit_index; qit_indexed; qit_ret_lv; qit_constr; qit_quot }
   )
 
